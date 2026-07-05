@@ -1,0 +1,52 @@
+# Keep important source and project files visible.
+!README.md
+!.gitignore
+!*.uvprojx
+!*.syscfg
+!ti_msp_dl_config.c
+!ti_msp_dl_config.h
+!App/**
+!Control/**
+!Hardware/**
+!System/**
+!User/**
+!keil/**
+!migration_report_mspm0.md
+
+# Keil build outputs
+Objects/
+Listings/
+DebugConfig/
+*.o
+*.d
+*.crf
+*.htm
+*.map
+*.axf
+*.hex
+*.bin
+*.elf
+*.lst
+*.lnp
+*.dep
+
+# Keil local user settings
+*.uvguix.*
+*.uvoptx
+*.uvopt
+
+# J-Link local settings and logs
+JLinkSettings.ini
+JLinkSettings*.ini
+JLinkLog.txt
+JLinkLog*.txt
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
+Thumbs.db
+Desktop.ini
