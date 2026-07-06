@@ -21,23 +21,20 @@ volatile uint8_t g_task_10ms_count = 0U;
 volatile uint8_t g_task_100ms_count = 0U;
 volatile uint8_t g_task_200ms_count = 0U;
 
-static uint8_t Main_TakeTaskCounter(volatile uint8_t *counter)
+static uint8_t Main_TakeTaskCounterAll(volatile uint8_t *counter)
 {
-    uint8_t hasTask = 0U;
+    uint8_t count;
     uint32_t primask = __get_PRIMASK();
 
     __disable_irq();
-    if (*counter > 0U)
-    {
-        (*counter)--;
-        hasTask = 1U;
-    }
+    count = *counter;
+    *counter = 0U;
     if (primask == 0U)
     {
         __enable_irq();
     }
 
-    return hasTask;
+    return count;
 }
 
 int main(void)
@@ -63,34 +60,43 @@ int main(void)
 
     while (1)
     {
-        if (Main_TakeTaskCounter(&g_task_1ms_count))
+        uint8_t taskCount;
+
+        if (Main_TakeTaskCounterAll(&g_task_1ms_count) > 0U)
         {
             /* Reserved for light 1 ms services. Full grayscale processing stays out of ISR. */
         }
 
-        if (Main_TakeTaskCounter(&g_task_5ms_count))
+        taskCount = Main_TakeTaskCounterAll(&g_task_5ms_count);
+        if (taskCount > 0U)
         {
-            App_Control_UpdateEncoderSpeed();
+            App_Control_UpdateEncoderSpeed((uint16_t)taskCount * ECAR_ENCODER_SPEED_PERIOD_MS);
         }
 
-        if (Main_TakeTaskCounter(&g_task_10ms_count))
+        taskCount = Main_TakeTaskCounterAll(&g_task_10ms_count);
+        if (taskCount > 2U)
+        {
+            taskCount = 2U;
+        }
+        while (taskCount > 0U)
         {
 #if ECAR_BOARD_TEST_MODE
             App_Line_Update();
 #else
             ECar_Control10ms();
 #endif
+            taskCount--;
         }
 
         ECar_KeyProcess();
         ECar_SerialProcess();
 
-        if (Main_TakeTaskCounter(&g_task_100ms_count))
+        if (Main_TakeTaskCounterAll(&g_task_100ms_count) > 0U)
         {
             ECar_SerialPlot100ms();
         }
 
-        if (Main_TakeTaskCounter(&g_task_200ms_count))
+        if (Main_TakeTaskCounterAll(&g_task_200ms_count) > 0U)
         {
             ECar_ShowStatus();
         }

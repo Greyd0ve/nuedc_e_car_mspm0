@@ -87,15 +87,20 @@ void App_Control_ForcePWMZero(void)
     App_Control_ResetPID();
 }
 
-void App_Control_UpdateEncoderSpeed(void)
+void App_Control_UpdateEncoderSpeed(uint16_t periodMs)
 {
     int16_t leftDelta;
     int16_t rightDelta;
     float speedScale;
 
+    if (periodMs == 0U)
+    {
+        periodMs = ECAR_ENCODER_SPEED_PERIOD_MS;
+    }
+
     leftDelta = Encoder_GetLeftDelta();
     rightDelta = Encoder_GetRightDelta();
-    speedScale = ECAR_CM_PER_PULSE * 1000.0f / (float)ECAR_ENCODER_SPEED_PERIOD_MS;
+    speedScale = ECAR_CM_PER_PULSE * 1000.0f / (float)periodMs;
 
     g_leftEncoderDelta = leftDelta;
     g_rightEncoderDelta = rightDelta;

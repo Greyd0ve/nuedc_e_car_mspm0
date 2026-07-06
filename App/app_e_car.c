@@ -169,8 +169,6 @@ static void ECar_SafeStop(void)
     g_targetForwardSpeed = 0.0f;
     g_targetTurnSpeed = 0.0f;
     g_carEnable = 0U;
-    Motor_StopAll();
-    App_Control_ResetPID();
     App_Control_ForcePWMZero();
 }
 
@@ -289,7 +287,6 @@ static uint8_t ECar_IsCornerDetected(void)
 {
     int32_t pulse;
     int32_t interval;
-    uint8_t blackCount;
     uint8_t cornerBlackCountTh;
 
     cornerBlackCountTh = g_eCarParam.corner_black_count_th;
@@ -298,10 +295,14 @@ static uint8_t ECar_IsCornerDetected(void)
         cornerBlackCountTh = 5U;
     }
 
-    blackCount = g_lineBlackCount;
-    if (blackCount < cornerBlackCountTh)
+    if (g_lineBlackCount < cornerBlackCountTh)
     {
         s_cornerCandidateCount = 0U;
+        return 0U;
+    }
+
+    if (g_lineCornerMaskStableCount < ECAR_CORNER_CONFIRM_COUNT)
+    {
         return 0U;
     }
 
@@ -401,6 +402,7 @@ static void ECar_HandleLineRun(void)
     if (ECar_IsCornerDetected())
     {
         ECar_SetState(E_CAR_CORNER_ENTER);
+        s_cornerCandidateCount = 0U;
     }
 }
 

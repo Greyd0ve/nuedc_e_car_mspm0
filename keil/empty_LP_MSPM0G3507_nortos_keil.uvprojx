@@ -478,6 +478,11 @@
               <FileType>1</FileType>
               <FilePath>..\App\app_line.c</FilePath>
             </File>
+            <File>
+              <FileName>app_aim_link.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_aim_link.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
