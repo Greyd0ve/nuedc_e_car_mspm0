@@ -44,7 +44,16 @@
 #define GPIO_BEEP_IOMUX                 GPIO_BOARD_IO_BEEP_IOMUX
 #endif
 
-#if !defined(GPIO_ENCODER_INT_IRQN) && defined(GPIO_ENCODER_GPIOB_INT_IRQN)
+#if !defined(GPIO_ENCODER_L_A_PORT) && defined(GPIO_ENCODER_PORT)
+#define GPIO_ENCODER_L_A_PORT           GPIO_ENCODER_PORT
+#define GPIO_ENCODER_L_B_PORT           GPIO_ENCODER_PORT
+#define GPIO_ENCODER_R_A_PORT           GPIO_ENCODER_PORT
+#define GPIO_ENCODER_R_B_PORT           GPIO_ENCODER_PORT
+#endif
+
+#if !defined(GPIO_ENCODER_INT_IRQN) && defined(GPIO_ENCODER_GPIOA_INT_IRQN)
+#define GPIO_ENCODER_INT_IRQN           GPIO_ENCODER_GPIOA_INT_IRQN
+#elif !defined(GPIO_ENCODER_INT_IRQN) && defined(GPIO_ENCODER_GPIOB_INT_IRQN)
 #define GPIO_ENCODER_INT_IRQN           GPIO_ENCODER_GPIOB_INT_IRQN
 #endif
 
@@ -93,11 +102,9 @@
 
 /* ---------------- Encoders ----------------
  * First version uses A-phase GPIO interrupt and B-phase level sampling.
- * The selected pins are TIMG8/TIMG12 capable but are configured as GPIO:
- * ENC_L_A -> PB6  / TIMG8-C0,  ENC_L_B -> PB7  / TIMG8-C1
- * ENC_R_A -> PA14 / TIMG12-C0, ENC_R_B -> PA31 / TIMG12-C1
- * If the actual board routes these timer channels to other package pins,
- * update SysConfig and the generated macros, then keep these logical names.
+ * ENC_L_A -> PA26, ENC_L_B -> PA27
+ * ENC_R_A -> PA14, ENC_R_B -> PA25
+ * A phases are on GPIOA, so GROUP1 GPIOA dispatch handles both counters.
  */
 #define ENC_L_A_PORT                    GPIO_ENCODER_L_A_PORT
 #define ENC_L_A_PIN                     GPIO_ENCODER_L_A_PIN

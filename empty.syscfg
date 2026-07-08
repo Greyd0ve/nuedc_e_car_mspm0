@@ -59,23 +59,22 @@ GPIO1.associatedPins[3].initialValue = "CLEARED";
 /*
  * Encoder first pass:
  * M1 = left, M2 = right.  A phase is interrupt input, B phase is sampled.
- * The physical timer-channel-to-pin routing must be confirmed in SysConfig
- * for the final PCB connector: TIMG8-C0/C1 and TIMG12-C0/C1 are required.
+ * ENC_L_A/ENC_L_B = PA26/PA27, ENC_R_A/ENC_R_B = PA14/PA25.
  */
 GPIO2.$name = "GPIO_ENCODER";
 GPIO2.associatedPins.create(4);
 GPIO2.associatedPins[0].$name            = "L_A";
-GPIO2.associatedPins[0].assignedPort     = "PORTB";
-GPIO2.associatedPins[0].assignedPin      = "6";
-GPIO2.associatedPins[0].pin.$assign      = "PB6";
+GPIO2.associatedPins[0].assignedPort     = "PORTA";
+GPIO2.associatedPins[0].assignedPin      = "26";
+GPIO2.associatedPins[0].pin.$assign      = "PA26";
 GPIO2.associatedPins[0].direction        = "INPUT";
 GPIO2.associatedPins[0].internalResistor = "PULL_UP";
 GPIO2.associatedPins[0].interruptEn      = true;
 GPIO2.associatedPins[0].polarity         = "RISE_FALL";
 GPIO2.associatedPins[1].$name            = "L_B";
-GPIO2.associatedPins[1].assignedPort     = "PORTB";
-GPIO2.associatedPins[1].assignedPin      = "7";
-GPIO2.associatedPins[1].pin.$assign      = "PB7";
+GPIO2.associatedPins[1].assignedPort     = "PORTA";
+GPIO2.associatedPins[1].assignedPin      = "27";
+GPIO2.associatedPins[1].pin.$assign      = "PA27";
 GPIO2.associatedPins[1].direction        = "INPUT";
 GPIO2.associatedPins[1].internalResistor = "PULL_UP";
 GPIO2.associatedPins[2].$name            = "R_A";
@@ -88,8 +87,8 @@ GPIO2.associatedPins[2].interruptEn      = true;
 GPIO2.associatedPins[2].polarity         = "RISE_FALL";
 GPIO2.associatedPins[3].$name            = "R_B";
 GPIO2.associatedPins[3].assignedPort     = "PORTA";
-GPIO2.associatedPins[3].assignedPin      = "31";
-GPIO2.associatedPins[3].pin.$assign      = "PA31";
+GPIO2.associatedPins[3].assignedPin      = "25";
+GPIO2.associatedPins[3].pin.$assign      = "PA25";
 GPIO2.associatedPins[3].direction        = "INPUT";
 GPIO2.associatedPins[3].internalResistor = "PULL_UP";
 

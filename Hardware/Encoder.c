@@ -85,31 +85,48 @@ static void Encoder_HandleRightA(void)
     s_rightDelta += dir * RIGHT_ENCODER_DIR;
 }
 
+static void Encoder_ServicePort(GPIO_Regs *port)
+{
+    uint32_t mask = 0U;
+    uint32_t status;
+
+    if (ENC_L_A_PORT == port)
+    {
+        mask |= ENC_L_A_PIN;
+    }
+    if (ENC_R_A_PORT == port)
+    {
+        mask |= ENC_R_A_PIN;
+    }
+    if (mask == 0U)
+    {
+        return;
+    }
+
+    status = DL_GPIO_getEnabledInterruptStatus(port, mask);
+    DL_GPIO_clearInterruptStatus(port, status);
+
+    if ((ENC_L_A_PORT == port) && ((status & ENC_L_A_PIN) != 0U))
+    {
+        Encoder_HandleLeftA();
+    }
+    if ((ENC_R_A_PORT == port) && ((status & ENC_R_A_PIN) != 0U))
+    {
+        Encoder_HandleRightA();
+    }
+}
+
 void GROUP1_IRQHandler(void)
 {
     switch (DL_Interrupt_getPendingGroup(DL_INTERRUPT_GROUP_1))
     {
         case DL_INTERRUPT_GROUP1_IIDX_GPIOB:
-        {
-            uint32_t status = DL_GPIO_getEnabledInterruptStatus(ENC_L_A_PORT, ENC_L_A_PIN);
-            DL_GPIO_clearInterruptStatus(ENC_L_A_PORT, status);
-            if ((status & ENC_L_A_PIN) != 0U)
-            {
-                Encoder_HandleLeftA();
-            }
+            Encoder_ServicePort(GPIOB);
             break;
-        }
 
         case DL_INTERRUPT_GROUP1_IIDX_GPIOA:
-        {
-            uint32_t status = DL_GPIO_getEnabledInterruptStatus(ENC_R_A_PORT, ENC_R_A_PIN);
-            DL_GPIO_clearInterruptStatus(ENC_R_A_PORT, status);
-            if ((status & ENC_R_A_PIN) != 0U)
-            {
-                Encoder_HandleRightA();
-            }
+            Encoder_ServicePort(GPIOA);
             break;
-        }
 
         default:
             break;
