@@ -21,8 +21,9 @@ static int16_t Encoder_LimitDelta(int32_t value)
 void Encoder_Init(void)
 {
     Encoder_ClearAll();
-    DL_GPIO_clearInterruptStatus(
-        ENCODER_LEFT_A_PORT, ENCODER_LEFT_A_PIN | ENCODER_RIGHT_A_PIN);
+
+    DL_GPIO_clearInterruptStatus(ENC_L_A_PORT, ENC_L_A_PIN);
+    DL_GPIO_clearInterruptStatus(ENC_R_A_PORT, ENC_R_A_PIN);
     NVIC_ClearPendingIRQ(ENCODER_GPIO_IRQN);
     NVIC_EnableIRQ(ENCODER_GPIO_IRQN);
 }
@@ -72,28 +73,43 @@ void Encoder_ClearAll(void)
     }
 }
 
+static void Encoder_HandleLeftA(void)
+{
+    int32_t dir = (DL_GPIO_readPins(ENC_L_B_PORT, ENC_L_B_PIN) != 0U) ? 1 : -1;
+    s_leftDelta += dir * LEFT_ENCODER_DIR;
+}
+
+static void Encoder_HandleRightA(void)
+{
+    int32_t dir = (DL_GPIO_readPins(ENC_R_B_PORT, ENC_R_B_PIN) != 0U) ? 1 : -1;
+    s_rightDelta += dir * RIGHT_ENCODER_DIR;
+}
+
 void GROUP1_IRQHandler(void)
 {
-    uint32_t status;
-
     switch (DL_Interrupt_getPendingGroup(DL_INTERRUPT_GROUP_1))
     {
         case DL_INTERRUPT_GROUP1_IIDX_GPIOB:
-            status = DL_GPIO_getEnabledInterruptStatus(
-                GPIOB, ENCODER_LEFT_A_PIN | ENCODER_RIGHT_A_PIN);
-            DL_GPIO_clearInterruptStatus(GPIOB, status);
-
-            if ((status & ENCODER_LEFT_A_PIN) != 0U)
+        {
+            uint32_t status = DL_GPIO_getEnabledInterruptStatus(ENC_L_A_PORT, ENC_L_A_PIN);
+            DL_GPIO_clearInterruptStatus(ENC_L_A_PORT, status);
+            if ((status & ENC_L_A_PIN) != 0U)
             {
-                int32_t dir = (DL_GPIO_readPins(ENCODER_LEFT_B_PORT, ENCODER_LEFT_B_PIN) != 0U) ? 1 : -1;
-                s_leftDelta += dir * LEFT_ENCODER_SIGN;
-            }
-            if ((status & ENCODER_RIGHT_A_PIN) != 0U)
-            {
-                int32_t dir = (DL_GPIO_readPins(ENCODER_RIGHT_B_PORT, ENCODER_RIGHT_B_PIN) != 0U) ? 1 : -1;
-                s_rightDelta += dir * RIGHT_ENCODER_SIGN;
+                Encoder_HandleLeftA();
             }
             break;
+        }
+
+        case DL_INTERRUPT_GROUP1_IIDX_GPIOA:
+        {
+            uint32_t status = DL_GPIO_getEnabledInterruptStatus(ENC_R_A_PORT, ENC_R_A_PIN);
+            DL_GPIO_clearInterruptStatus(ENC_R_A_PORT, status);
+            if ((status & ENC_R_A_PIN) != 0U)
+            {
+                Encoder_HandleRightA();
+            }
+            break;
+        }
 
         default:
             break;

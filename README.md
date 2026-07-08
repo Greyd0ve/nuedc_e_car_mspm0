@@ -1,307 +1,144 @@
 # nuedc_e_car_mspm0
 
-## 1. 项目简介
+本工程是基于 TI MSPM0G3507、Keil MDK、MSPM0 SDK、SysConfig 和 MSPM0 DriverLib 的电赛 E 题自动寻迹小车工程。当前阶段优先适配新版 IO 并做板级外设验证，不默认上车完整循迹。
 
-本仓库是 **2025 年全国大学生电子设计竞赛 E 题：简易自行瞄准装置** 中小车部分的 TI MSPM0G3507 迁移工程。
-
-当前工程面向：
-
-- 立创·天猛星 MSPM0G3507 高配版开发板
-- TI MSPM0G3507
-- Keil MDK
-- TI MSPM0 SDK
-- SysConfig
-- MSPM0 DriverLib
-
-工程来源于原 STM32F103 E 题小车工程：
-
-- <https://github.com/Greyd0ve/nuedc-e-line-car>
-
-本仓库目标是将原有 `App/Control` 小车逻辑迁移到 MSPM0G3507，并用 MSPM0 DriverLib 重写底层硬件驱动。
-
-本仓库当前只包含自动寻迹小车部分代码，不包含二维云台、激光瞄准、视觉识别或瞄准模块控制代码。
-
-迁移记录可参考仓库根目录下的 `migration_report_mspm0.md`。`build_mspm0_port.log` 是本地构建日志，默认不建议提交。
-
-## 2. 当前状态
-
-- 当前状态：第一轮可编译迁移完成
-- 构建结果：`0 Error(s), 0 Warning(s)`
-- 烧录状态：尚未烧录当前小车工程
-- 实测状态：尚未上车实测
-- 安全状态：默认不启动车轮
-
-已完成：
-
-- `App/Control` 主体逻辑已迁入
-- `Hardware/System` 已重写为 MSPM0 DriverLib 版本
-- Keil Rebuild 通过：`0 Error(s), 0 Warning(s)`
-
-尚未完成：
-
-- 当前小车工程烧录验证
-- 实车上车测试
-- 完整循迹闭环调参
-
-## 3. 题目相关要求
-
-E 题中与小车相关的关键要求：
-
-- 小车寻迹和电机控制必须使用 TI MSPM0 系列 MCU
-- 行驶轨迹为 `100cm x 100cm` 正方形黑线
-- 黑色轨迹线宽约 `1.8cm ± 0.2cm`
-- 小车逆时针循迹
-- 圈数 `N` 可设定为 `1~5`
-- 基本要求小车 `N` 圈行驶时间 `t <= 20s`
-- 行驶过程中不得遥控小车运动
-- 小车尺寸不超过 `25cm x 15cm x 25cm`
-
-## 4. 硬件平台
-
-- MCU：TI MSPM0G3507
-- 开发板：立创·天猛星 MSPM0G3507 高配版开发板
-- 电机驱动：TB6612FNG
-- 电机：左右两路直流减速电机
-- 编码器：左右两路正交编码器
-- 灰度传感器：CD4051 八路灰度采集
-- 显示：OLED，当前为临时 stub，I2C 真驱动尚未接入
-- 通信：UART1，另预留可选调试串口引脚
-- 输入：4 路按键
-- 下载调试：SWD，当前使用 J-Link 兼容下载器
-
-## 5. IO 分配
-
-### TB6612FNG
-
-| 信号 | MSPM0 引脚 | 作用 |
-| --- | --- | --- |
-| PWMA | PA12 / A12 | 左电机 PWM |
-| AIN1 | PB06 / B06 | 左电机方向 1 |
-| AIN2 | PB07 / B07 | 左电机方向 2 |
-| PWMB | PA13 / A13 | 右电机 PWM |
-| BIN1 | PB08 / B08 | 右电机方向 1 |
-| BIN2 | PB09 / B09 | 右电机方向 2 |
-| STBY | PB23 / B23 | TB6612 STBY |
-
-### 编码器
-
-| 信号 | MSPM0 引脚 | 作用 |
-| --- | --- | --- |
-| E1A | PB10 / B10 | 左编码器 A 相，中断输入 |
-| E1B | PB11 / B11 | 左编码器 B 相，普通输入 |
-| E2A | PB00 / B00 | 右编码器 A 相，中断输入 |
-| E2B | PB01 / B01 | 右编码器 B 相，普通输入 |
-
-### 灰度 CD4051
-
-| 信号 | MSPM0 引脚 | 作用 |
-| --- | --- | --- |
-| OUT | PA14 / A14 | CD4051 输出采样 |
-| AD0 | PA15 / A15 | CD4051 地址位 0 |
-| AD1 | PA16 / A16 | CD4051 地址位 1 |
-| AD2 | PA17 / A17 | CD4051 地址位 2 |
-
-### UART
-
-| 信号 | MSPM0 引脚 | 作用 |
-| --- | --- | --- |
-| UART1_TX | PA08 / A08 | UART1 发送 |
-| UART1_RX | PA09 / A09 | UART1 接收 |
-| DBG_TX | PA10 / A10 | 可选调试发送 |
-| DBG_RX | PA11 / A11 | 可选调试接收 |
-
-### 按键
-
-| 信号 | MSPM0 引脚 | 作用 |
-| --- | --- | --- |
-| K1 | PB15 / B15 | 按键 1 |
-| K2 | PB16 / B16 | 按键 2 |
-| K3 | PB02 / B02 | 按键 3 |
-| K4 | PB03 / B03 | 按键 4 |
-
-### OLED
-
-| 信号 | MSPM0 引脚 | 作用 |
-| --- | --- | --- |
-| OLED SDA | PA00 / A00 | OLED I2C 数据线 |
-| OLED SCL | PA01 / A01 | OLED I2C 时钟线 |
-
-### SWD
-
-| 信号 | 说明 |
-| --- | --- |
-| 3V3 | 目标板电源参考 |
-| GND | 地 |
-| SWDIO / DIO | SWD 数据 |
-| SWCLK / CLK | SWD 时钟 |
-| RST | 复位 |
-
-## 6. 软件架构
-
-主要目录：
+## 软件结构
 
 | 目录 | 说明 |
 | --- | --- |
-| `User/` | 入口与主循环 |
-| `App/` | E 题小车应用逻辑、串口命令、循迹逻辑 |
-| `Control/` | PID 等控制算法 |
-| `Hardware/` | MSPM0G3507 硬件驱动封装 |
-| `System/` | 定时器与系统调度 |
+| `User/` | 主入口与主循环 |
+| `App/` | E 题状态机、循迹逻辑、串口命令、板级测试 |
+| `Control/` | PID、滤波、速度闭环 |
+| `Hardware/` | MSPM0G3507 外设驱动封装 |
+| `System/` | 系统节拍、定时器、调度 |
 | `keil/` | Keil MDK 工程文件 |
 
-迁移关系：
+板级逻辑名集中在 `Hardware/Board_Config.h`。如果 SysConfig 重新生成的宏名变化，优先在 `Board_Config.h` 中做映射，不要在 App 层散落 DriverLib 或寄存器调用。
 
-- `App/Control`：从原 STM32 工程迁移，保留上层小车控制逻辑
-- `Hardware/System`：使用 MSPM0 DriverLib 重写，替代 STM32 标准外设库访问
-- `ti_msp_dl_config.c/.h`：由 SysConfig 生成，提供底层外设初始化配置
+## 新版 IO 映射
 
-## 7. 当前真实驱动与临时 Stub
+### TB6612 电机驱动
 
-真实 MSPM0 DriverLib 驱动：
+| 逻辑名 | 硬件连接 | 说明 |
+| --- | --- | --- |
+| `MOTOR_L_PWM` | TIMG0-C0 | 左电机 PWM |
+| `MOTOR_L_IN1` | B17 | 左电机方向 1 |
+| `MOTOR_L_IN2` | B19 | 左电机方向 2 |
+| `MOTOR_R_PWM` | TIMG0-C1 | 右电机 PWM |
+| `MOTOR_R_IN1` | A16 | 右电机方向 1 |
+| `MOTOR_R_IN2` | B24 | 右电机方向 2 |
+| `MOTOR_STBY` | 5V | 常使能，不占用 MCU IO |
 
-- PWM
-- Motor
-- Encoder
-- Grayscale
-- Key
-- Serial
-- Timer
+STBY 当前直接接 5V，软件不能依赖 STBY 关断电机，只能通过 PWM=0 和方向脚安全状态停车。
 
-临时 stub：
+### 编码器
 
-- OLED
-- BeepLed
+| 逻辑名 | 目标连接 | 当前代码映射 |
+| --- | --- | --- |
+| `ENC_L_A` | TIMG8-C0 | PB6，A 路中断 |
+| `ENC_L_B` | TIMG8-C1 | PB7，B 路方向采样 |
+| `ENC_R_A` | TIMG12-C0 | PA14，A 路中断 |
+| `ENC_R_B` | TIMG12-C1 | PA31，B 路方向采样 |
 
-OLED 与 BeepLed 当前用于保证迁移阶段可编译和安全占位，后续需要按实际硬件补齐真驱动。
+当前第一版使用 A 路 GPIO 双边沿中断计数、B 路读取电平判断方向，并保留 `LEFT_ENCODER_DIR` / `RIGHT_ENCODER_DIR` 方向系数。TIMG8/TIMG12 通道到实际接口的封装脚需要在 SysConfig GUI 和硬件原理图中复核。
 
-## 8. 开发环境
+### 八路灰度模块
 
-| 项目 | 路径或版本 |
+| 逻辑名 | 引脚 | 说明 |
+| --- | --- | --- |
+| `GRAY_AD2` | B01 | 多路选择地址位 |
+| `GRAY_AD1` | B10 | 多路选择地址位 |
+| `GRAY_AD0` | B13 | 多路选择地址位 |
+| `GRAY_OUT` | B23 | 灰度输出输入 |
+
+灰度模块当前按 5V 供电记录。`GRAY_OUT` 进入 MSPM0 B23 前，硬件必须已经通过分压或电平转换降到 3.3V 安全范围。软件无法把 5V GPIO 输入变安全，不能用代码掩盖硬件风险。`GRAY_AD0/AD1/AD2` 是 MSPM0 普通 3.3V 输出，如果 5V 模块不能可靠识别 3.3V 高电平，需要硬件增加电平转换。
+
+### I2C、蜂鸣器、LED、按键、舵机、UART
+
+| 外设 | 映射 |
 | --- | --- |
-| Keil | `D:\Keil_v5_38a\UV4\UV4.exe` |
-| Keil 版本 | `µVision V5.39.0.0` |
-| Compiler | `ArmClang V6.21` |
-| MSPM0 SDK | `D:\ti2\mspm0_sdk_2_02_00_05` |
-| SysConfig | `C:\ti\sysconfig_1.21.1` |
-| J-Link | `D:\Program Files (x86)\SEGGER\JLink\JLink.exe` |
-| J-Link 版本 | `V6.98e` |
+| I2C0 | OLED 与 MPU6050 共用 I2C0，SCL/SDA 上拉建议到 3.3V |
+| BEEP | A07 |
+| LED_USER | B04，若串联电阻为 10k，亮度可能偏低 |
+| KEY1/SW1 | B14，输入上拉，按下为 0 |
+| KEY2/SW2 | B11，输入上拉，按下为 0 |
+| KEY3/SW3 | B27，输入上拉，按下为 0 |
+| KEY4/SW4 | B26，输入上拉，按下为 0 |
+| SERVO1_PWM | TIMA0-C0，当前代码映射 PB8 |
+| SERVO2_PWM | TIMA0-C1，当前代码映射 PB9 |
+| SERVO3_PWM | TIMA0-C2，当前代码映射 PA15 |
+| SERVO4_PWM | TIMA0-C3，当前代码映射 PA17 |
+| UART0 | USB 调试 / printf / board test 日志，当前 115200 |
+| UART1 | 预留 K230 / 瞄准模块 |
+| UART2/UART3 | 备用 |
 
-Flash Algorithm：
+舵机电源应使用独立大电流供电，并与主控共地。舵机测试默认关闭，需要显式打开宏。
 
-- `MSPM0G1X0X_G3X0X_MAIN_128KB.FLM`
-- 路径：`C:\Users\zch20\AppData\Local\Arm\Packs\TexasInstruments\MSPM0G1X0X_G3X0X_DFP\1.3.1\02_Flash_Programming\FlashARM\MSPM0G1X0X_G3X0X_MAIN_128KB.FLM`
+SWDIO/SWCLK 不要配置为普通 GPIO。建议后续硬件把 RST 补到 SWD 接口。
 
-已验证 SWD 信息：
+## 板级测试模式
+
+默认 `App/app_config.h` 中：
+
+```c
+#define ECAR_BOARD_TEST_MODE 1
+#define ECAR_TEST_MOTOR_ENABLE 0
+#define ECAR_TEST_SERVO_ENABLE 0
+#define ECAR_TEST_BEEP_ENABLE 1
+#define ECAR_TEST_OLED_ENABLE 0
+#define ECAR_TEST_IMU_ENABLE 0
+```
+
+板级测试模式不进入完整 E 题状态机，不自动启动电机。UART0 周期输出类似：
 
 ```text
-VTref = 3.300V
-Found SW-DP with ID 0x6BA02477
-CPUID = 0x410CC601
+[boot] mspm0 e-car board test
+[key] k1=1 k2=1 k3=1 k4=1
+[gray] raw=1,0,0,1,1,0,0,1 err=-2
+[enc] left=123 right=120
+[pwm] disabled
+[servo] disabled
+[imu] stub
+[oled] disabled
 ```
 
-## 9. 构建方法
+电机低占空比架空测试需要先把 `ECAR_TEST_MOTOR_ENABLE` 改为 1，并通过串口发送 `[test,arm]` 后才允许 `[test,pwm,left,right]`。默认宏值下，即使收到电机测试命令也会拒绝并保持停车。
 
-使用 Keil V5.39 打开工程：
+## 当前实现状态
 
-```text
-C:\Users\zch20\Desktop\Myproject\Github仓库\nuedc_e_car_mspm0\keil\empty_LP_MSPM0G3507_nortos_keil.uvprojx
-```
+已实现或适配：
 
-打开后执行 `Rebuild`。
+- 电机 PWM 与方向控制，默认 `Motor_StopAll()`
+- 编码器 A 路中断计数、B 路方向判断
+- CD4051 灰度 8 路轮询和加权误差
+- KEY1~KEY4 输入上拉、软件消抖、短按事件
+- UART0 调试输出与串口命令解析
+- A07 蜂鸣器、B04 用户 LED
+- TIMA0 四路舵机基础 PWM 接口
+- Board test 周期状态输出
 
-当前已验证构建结果：
+保留 stub 或最小接口：
 
-```text
-0 Error(s), 0 Warning(s)
-```
+- OLED：接口保留，使用 I2C0，默认 board test 不启用
+- MPU6050：保留 WHO_AM_I 最小读取接口，默认 board test 不启用
+- UART1/UART2/UART3：用途预留，当前未初始化为独立通信驱动
 
-也可以使用 Keil 命令行构建，示例：
+## SysConfig 复核项
 
-```bat
-"D:\Keil_v5_38a\UV4\UV4.exe" -b "C:\Users\zch20\Desktop\Myproject\Github仓库\nuedc_e_car_mspm0\keil\empty_LP_MSPM0G3507_nortos_keil.uvprojx" -j0 -o "C:\Users\zch20\Desktop\Myproject\Github仓库\nuedc_e_car_mspm0\build_mspm0_port.log"
-```
+`empty.syscfg` 已同步新版 IO，但当前工程以本地 `ti_msp_dl_config.c/.h` 为准。重新打开 SysConfig 或重新生成代码前，请重点复核：
 
-命令行构建不是必须流程，日常可直接使用 Keil 图形界面。
+1. TIMG0-C0/C1 是否仍为电机 PWM。
+2. TIMA0-C0~C3 是否对应实际 H7/H15/H8/H14 舵机接口。
+3. TIMG8-C0/C1、TIMG12-C0/C1 到编码器接口的真实封装脚是否和当前代码映射一致。
+4. UART0 是否为 USB 调试口，波特率 115200。
+5. I2C0 的 OLED/MPU6050 供电与上拉是否都是 3.3V。
+6. 灰度 `GRAY_OUT` 到 B23 前是否已经硬件限压到 3.3V。
 
-如果命令行构建因中文路径或编码问题失败，优先使用 Keil GUI 打开工程并执行 Rebuild。
+## 上车前安全检查
 
-## 10. 下载器注意事项
-
-当前下载器识别为：
-
-```text
-J-Link ARM-OB STM32 / SAM-ICE
-```
-
-该下载器可通过 SWD 访问 MSPM0G3507。
-
-如果 Keil/J-Link 无法连接目标芯片，需要检查 `JLinkSettings.ini` 是否错误残留：
-
-```text
-Device="ARM7"
-```
-
-正确配置应为：
-
-```text
-Device="Cortex-M0+"
-```
-
-本仓库当前只记录注意事项，不包含烧录或实车运行步骤。
-
-## 11. 安全说明
-
-当前工程默认不启动车轮，迁移阶段不要直接上车运行。
-
-已做的默认安全处理：
-
-1. `Motor_Init()` 后调用 `Motor_StopAll()`
-2. 默认 `g_carEnable = 0`
-3. 默认目标速度为 `0`
-4. PWM compare 为 `0`
-5. 方向引脚默认拉低
-6. `main()` 不主动调用 `ECar_Start()`
-7. 串口远程 start 默认禁用：`ECAR_ENABLE_REMOTE_START = 0`
-
-后续上电测试建议先架空车轮，按 UART、按键、灰度、编码器、PWM 的顺序逐项验证。
-
-## 12. 下一步计划
-
-1. UART 回显
-2. Key 按键测试
-3. 灰度 `raw[8]` 打印
-4. 编码器架空测试
-5. PWM 架空电机测试
-6. OLED I2C 真驱动
-7. 最后再启用 `ECar_Start()` 低速循迹
-
-## 13. Git 提交建议
-
-建议提交：
-
-- `App/`
-- `Control/`
-- `Hardware/`
-- `System/`
-- `User/`
-- `keil/*.uvprojx`
-- `*.syscfg`
-- `ti_msp_dl_config.c`
-- `ti_msp_dl_config.h`
-- `README.md`
-- `.gitignore`
-- `migration_report_mspm0.md`
-
-不建议提交：
-
-- `Objects/`
-- `Listings/`
-- `DebugConfig/`
-- `*.axf`
-- `*.hex`
-- `*.map`
-- `*.o`
-- `*.d`
-- `JLinkLog.txt`
-- `JLinkSettings.ini`
-- `build_mspm0_port.log`
+1. 保持 `ECAR_TEST_MOTOR_ENABLE = 0`，先验证 UART、按键、LED、蜂鸣器、灰度和编码器。
+2. 架空车轮后再打开电机测试宏，并使用低占空比短时间测试。
+3. 确认 `g_carEnable` 默认是 0，目标速度默认是 0，main 不主动调用 `ECar_Start()`。
+4. 确认 TB6612 STBY 虽然常使能，但 PWM 初值为 0、方向脚为安全状态。
+5. 舵机测试前确认独立供电和共地，避免从主控板取大电流。
+6. 灰度 5V 供电时绝不能把 5V OUT 直连 MSPM0 GPIO。

@@ -3,62 +3,255 @@
 
 #include "ti_msp_dl_config.h"
 
-#define MOTOR_USE_STBY              1U
+/*
+ * Board pin map for the revised NUEDC E-car wiring.
+ *
+ * Keep application code using these names.  SysConfig-generated names stay
+ * below this file and can be changed without touching App/Control logic.
+ */
 
-#define MOTOR_PWM_TIMER_INST        TIMG0
-#define MOTOR_PWM_LEFT_CC_INDEX     DL_TIMER_CC_0_INDEX
-#define MOTOR_PWM_RIGHT_CC_INDEX    DL_TIMER_CC_1_INDEX
-#define MOTOR_PWM_PERIOD_COUNTS     1600U
+/* Compatibility aliases for SysConfig-generated grouped GPIO names. */
+#if !defined(GPIO_I2C0_SCL_PORT) && defined(GPIO_I2C_SHARED_SCL_PORT)
+#define GPIO_I2C0_SCL_PORT              GPIO_I2C_SHARED_SCL_PORT
+#define GPIO_I2C0_SCL_PIN               GPIO_I2C_SHARED_SCL_PIN
+#define GPIO_I2C0_SDA_PORT              GPIO_I2C_SHARED_SDA_PORT
+#define GPIO_I2C0_SDA_PIN               GPIO_I2C_SHARED_SDA_PIN
+#endif
 
-#define MOTOR_AIN1_PORT             GPIOB
-#define MOTOR_AIN1_PIN              DL_GPIO_PIN_6
-#define MOTOR_AIN2_PORT             GPIOB
-#define MOTOR_AIN2_PIN              DL_GPIO_PIN_7
-#define MOTOR_BIN1_PORT             GPIOB
-#define MOTOR_BIN1_PIN              DL_GPIO_PIN_8
-#define MOTOR_BIN2_PORT             GPIOB
-#define MOTOR_BIN2_PIN              DL_GPIO_PIN_9
-#define MOTOR_STBY_PORT             GPIOB
-#define MOTOR_STBY_PIN              DL_GPIO_PIN_23
+#if !defined(GPIO_GRAYSCALE_AD0_PORT) && defined(GPIO_GRAYSCALE_PORT)
+#define GPIO_GRAYSCALE_AD0_PORT         GPIO_GRAYSCALE_PORT
+#define GPIO_GRAYSCALE_AD1_PORT         GPIO_GRAYSCALE_PORT
+#define GPIO_GRAYSCALE_AD2_PORT         GPIO_GRAYSCALE_PORT
+#define GPIO_GRAYSCALE_OUT_PORT         GPIO_GRAYSCALE_PORT
+#endif
 
-#define LEFT_MOTOR_DIR_SIGN         (-1)
-#define RIGHT_MOTOR_DIR_SIGN        (+1)
+#if !defined(GPIO_KEYS_KEY1_PORT) && defined(GPIO_KEYS_PORT)
+#define GPIO_KEYS_KEY1_PORT             GPIO_KEYS_PORT
+#define GPIO_KEYS_KEY2_PORT             GPIO_KEYS_PORT
+#define GPIO_KEYS_KEY3_PORT             GPIO_KEYS_PORT
+#define GPIO_KEYS_KEY4_PORT             GPIO_KEYS_PORT
+#endif
 
-#define ENCODER_LEFT_A_PORT         GPIOB
-#define ENCODER_LEFT_A_PIN          DL_GPIO_PIN_10
-#define ENCODER_LEFT_B_PORT         GPIOB
-#define ENCODER_LEFT_B_PIN          DL_GPIO_PIN_11
-#define ENCODER_RIGHT_A_PORT        GPIOB
-#define ENCODER_RIGHT_A_PIN         DL_GPIO_PIN_0
-#define ENCODER_RIGHT_B_PORT        GPIOB
-#define ENCODER_RIGHT_B_PIN         DL_GPIO_PIN_1
-#define ENCODER_GPIO_IRQN           GPIOB_INT_IRQn
+#if !defined(GPIO_LED_USER_PORT) && defined(GPIO_BOARD_IO_LED_USER_PORT)
+#define GPIO_LED_USER_PORT              GPIO_BOARD_IO_LED_USER_PORT
+#define GPIO_LED_USER_PIN               GPIO_BOARD_IO_LED_USER_PIN
+#define GPIO_LED_USER_IOMUX             GPIO_BOARD_IO_LED_USER_IOMUX
+#endif
 
-#define LEFT_ENCODER_SIGN           (-1)
-#define RIGHT_ENCODER_SIGN          (+1)
+#if !defined(GPIO_BEEP_PORT) && defined(GPIO_BOARD_IO_BEEP_PORT)
+#define GPIO_BEEP_PORT                  GPIO_BOARD_IO_BEEP_PORT
+#define GPIO_BEEP_PIN                   GPIO_BOARD_IO_BEEP_PIN
+#define GPIO_BEEP_IOMUX                 GPIO_BOARD_IO_BEEP_IOMUX
+#endif
 
-#define GRAYSCALE_OUT_PORT          GPIOA
-#define GRAYSCALE_OUT_PIN           DL_GPIO_PIN_14
-#define GRAYSCALE_AD0_PORT          GPIOA
-#define GRAYSCALE_AD0_PIN           DL_GPIO_PIN_15
-#define GRAYSCALE_AD1_PORT          GPIOA
-#define GRAYSCALE_AD1_PIN           DL_GPIO_PIN_16
-#define GRAYSCALE_AD2_PORT          GPIOA
-#define GRAYSCALE_AD2_PIN           DL_GPIO_PIN_17
+#if !defined(GPIO_ENCODER_INT_IRQN) && defined(GPIO_ENCODER_GPIOB_INT_IRQN)
+#define GPIO_ENCODER_INT_IRQN           GPIO_ENCODER_GPIOB_INT_IRQN
+#endif
 
-#define KEY_K1_PORT                 GPIOB
-#define KEY_K1_PIN                  DL_GPIO_PIN_15
-#define KEY_K2_PORT                 GPIOB
-#define KEY_K2_PIN                  DL_GPIO_PIN_16
-#define KEY_K3_PORT                 GPIOB
-#define KEY_K3_PIN                  DL_GPIO_PIN_2
-#define KEY_K4_PORT                 GPIOB
-#define KEY_K4_PIN                  DL_GPIO_PIN_3
+/* ---------------- TB6612 motor driver ----------------
+ * PWMA -> TIMG0-C0, PWMB -> TIMG0-C1.
+ * STBY is tied to 5V on the current PCB.  There is no MCU STBY control.
+ */
+#define MOTOR_USE_STBY                  0U
+#define MOTOR_STBY_TIED_TO_5V           1U
+#define MOTOR_PWM_TIMER_INST            PWM_MOTOR_INST
+#define MOTOR_L_PWM_CC_INDEX            GPIO_PWM_MOTOR_C0_IDX
+#define MOTOR_R_PWM_CC_INDEX            GPIO_PWM_MOTOR_C1_IDX
+#define MOTOR_L_PWM                     MOTOR_L_PWM_CC_INDEX
+#define MOTOR_R_PWM                     MOTOR_R_PWM_CC_INDEX
+#define MOTOR_PWM_LEFT_CC_INDEX         MOTOR_L_PWM_CC_INDEX
+#define MOTOR_PWM_RIGHT_CC_INDEX        MOTOR_R_PWM_CC_INDEX
+#define MOTOR_PWM_PERIOD_COUNTS         1600U
 
-#define SERIAL_UART_INST            UART1
-#define SERIAL_UART_IRQN            UART1_INT_IRQn
+#define MOTOR_L_IN1_PORT                GPIO_MOTOR_L_IN1_PORT   /* B17 */
+#define MOTOR_L_IN1_PIN                 GPIO_MOTOR_L_IN1_PIN
+#define MOTOR_L_IN1                     MOTOR_L_IN1_PIN
+#define MOTOR_L_IN2_PORT                GPIO_MOTOR_L_IN2_PORT   /* B19 */
+#define MOTOR_L_IN2_PIN                 GPIO_MOTOR_L_IN2_PIN
+#define MOTOR_L_IN2                     MOTOR_L_IN2_PIN
+#define MOTOR_R_IN1_PORT                GPIO_MOTOR_R_IN1_PORT   /* A16 */
+#define MOTOR_R_IN1_PIN                 GPIO_MOTOR_R_IN1_PIN
+#define MOTOR_R_IN1                     MOTOR_R_IN1_PIN
+#define MOTOR_R_IN2_PORT                GPIO_MOTOR_R_IN2_PORT   /* B24 */
+#define MOTOR_R_IN2_PIN                 GPIO_MOTOR_R_IN2_PIN
+#define MOTOR_R_IN2                     MOTOR_R_IN2_PIN
 
-#define SYSTEM_TIMER_INST           TIMG8
-#define SYSTEM_TIMER_IRQN           TIMG8_INT_IRQn
+/* Legacy aliases kept for older modules during transition. */
+#define MOTOR_AIN1_PORT                 MOTOR_L_IN1_PORT
+#define MOTOR_AIN1_PIN                  MOTOR_L_IN1_PIN
+#define MOTOR_AIN2_PORT                 MOTOR_L_IN2_PORT
+#define MOTOR_AIN2_PIN                  MOTOR_L_IN2_PIN
+#define MOTOR_BIN1_PORT                 MOTOR_R_IN1_PORT
+#define MOTOR_BIN1_PIN                  MOTOR_R_IN1_PIN
+#define MOTOR_BIN2_PORT                 MOTOR_R_IN2_PORT
+#define MOTOR_BIN2_PIN                  MOTOR_R_IN2_PIN
+
+#define LEFT_MOTOR_DIR                  (-1)
+#define RIGHT_MOTOR_DIR                 (+1)
+#define LEFT_MOTOR_DIR_SIGN             LEFT_MOTOR_DIR
+#define RIGHT_MOTOR_DIR_SIGN            RIGHT_MOTOR_DIR
+
+/* ---------------- Encoders ----------------
+ * First version uses A-phase GPIO interrupt and B-phase level sampling.
+ * The selected pins are TIMG8/TIMG12 capable but are configured as GPIO:
+ * ENC_L_A -> PB6  / TIMG8-C0,  ENC_L_B -> PB7  / TIMG8-C1
+ * ENC_R_A -> PA14 / TIMG12-C0, ENC_R_B -> PA31 / TIMG12-C1
+ * If the actual board routes these timer channels to other package pins,
+ * update SysConfig and the generated macros, then keep these logical names.
+ */
+#define ENC_L_A_PORT                    GPIO_ENCODER_L_A_PORT
+#define ENC_L_A_PIN                     GPIO_ENCODER_L_A_PIN
+#define ENC_L_A                         ENC_L_A_PIN
+#define ENC_L_B_PORT                    GPIO_ENCODER_L_B_PORT
+#define ENC_L_B_PIN                     GPIO_ENCODER_L_B_PIN
+#define ENC_L_B                         ENC_L_B_PIN
+#define ENC_R_A_PORT                    GPIO_ENCODER_R_A_PORT
+#define ENC_R_A_PIN                     GPIO_ENCODER_R_A_PIN
+#define ENC_R_A                         ENC_R_A_PIN
+#define ENC_R_B_PORT                    GPIO_ENCODER_R_B_PORT
+#define ENC_R_B_PIN                     GPIO_ENCODER_R_B_PIN
+#define ENC_R_B                         ENC_R_B_PIN
+#define ENCODER_GPIO_IRQN               GPIO_ENCODER_INT_IRQN
+
+#define ENCODER_LEFT_A_PORT             ENC_L_A_PORT
+#define ENCODER_LEFT_A_PIN              ENC_L_A_PIN
+#define ENCODER_LEFT_B_PORT             ENC_L_B_PORT
+#define ENCODER_LEFT_B_PIN              ENC_L_B_PIN
+#define ENCODER_RIGHT_A_PORT            ENC_R_A_PORT
+#define ENCODER_RIGHT_A_PIN             ENC_R_A_PIN
+#define ENCODER_RIGHT_B_PORT            ENC_R_B_PORT
+#define ENCODER_RIGHT_B_PIN             ENC_R_B_PIN
+
+#define LEFT_ENCODER_DIR                (-1)
+#define RIGHT_ENCODER_DIR               (+1)
+#define LEFT_ENCODER_SIGN               LEFT_ENCODER_DIR
+#define RIGHT_ENCODER_SIGN              RIGHT_ENCODER_DIR
+
+/* ---------------- 8-channel grayscale module ----------------
+ * P3-1 VCC = 5V, P3-6 GND.
+ * GRAY_AD2 -> B01, GRAY_AD1 -> B10, GRAY_AD0 -> B13, GRAY_OUT -> B23.
+ *
+ * Hardware warning:
+ * The grayscale board is powered from 5V.  GRAY_OUT must be divided or level
+ * shifted to <= 3.3V before it reaches MSPM0 B23.  Software cannot make a
+ * direct 5V GPIO input safe.  AD0/AD1/AD2 are normal 3.3V MSPM0 outputs; if
+ * the 5V module does not recognize 3.3V high reliably, fix it in hardware.
+ */
+#define GRAY_AD0_PORT                   GPIO_GRAYSCALE_AD0_PORT
+#define GRAY_AD0_PIN                    GPIO_GRAYSCALE_AD0_PIN
+#define GRAY_AD0                        GRAY_AD0_PIN
+#define GRAY_AD1_PORT                   GPIO_GRAYSCALE_AD1_PORT
+#define GRAY_AD1_PIN                    GPIO_GRAYSCALE_AD1_PIN
+#define GRAY_AD1                        GRAY_AD1_PIN
+#define GRAY_AD2_PORT                   GPIO_GRAYSCALE_AD2_PORT
+#define GRAY_AD2_PIN                    GPIO_GRAYSCALE_AD2_PIN
+#define GRAY_AD2                        GRAY_AD2_PIN
+#define GRAY_OUT_PORT                   GPIO_GRAYSCALE_OUT_PORT
+#define GRAY_OUT_PIN                    GPIO_GRAYSCALE_OUT_PIN
+#define GRAY_OUT                        GRAY_OUT_PIN
+
+#define GRAYSCALE_AD0_PORT              GRAY_AD0_PORT
+#define GRAYSCALE_AD0_PIN               GRAY_AD0_PIN
+#define GRAYSCALE_AD1_PORT              GRAY_AD1_PORT
+#define GRAYSCALE_AD1_PIN               GRAY_AD1_PIN
+#define GRAYSCALE_AD2_PORT              GRAY_AD2_PORT
+#define GRAYSCALE_AD2_PIN               GRAY_AD2_PIN
+#define GRAYSCALE_OUT_PORT              GRAY_OUT_PORT
+#define GRAYSCALE_OUT_PIN               GRAY_OUT_PIN
+
+/* ---------------- I2C0 shared by OLED and MPU6050 ----------------
+ * Use 3.3V power and pull SDA/SCL up to 3.3V.  Do not pull I2C to 5V.
+ */
+#define I2C0_SCL_PORT                   GPIO_I2C0_SCL_PORT
+#define I2C0_SCL_PIN                    GPIO_I2C0_SCL_PIN
+#define I2C0_SCL                        I2C0_SCL_PIN
+#define I2C0_SDA_PORT                   GPIO_I2C0_SDA_PORT
+#define I2C0_SDA_PIN                    GPIO_I2C0_SDA_PIN
+#define I2C0_SDA                        I2C0_SDA_PIN
+#define BOARD_I2C0_INST                 I2C_SHARED_INST
+#define BOARD_I2C0_BUS_SPEED_HZ         I2C_SHARED_BUS_SPEED_HZ
+
+#define OLED_I2C_INST                   BOARD_I2C0_INST
+#define OLED_I2C_BUS_SPEED_HZ           BOARD_I2C0_BUS_SPEED_HZ
+#define OLED_I2C_SCL_PORT               I2C0_SCL_PORT
+#define OLED_I2C_SCL_PIN                I2C0_SCL_PIN
+#define OLED_I2C_SDA_PORT               I2C0_SDA_PORT
+#define OLED_I2C_SDA_PIN                I2C0_SDA_PIN
+#define MPU6050_I2C_INST                BOARD_I2C0_INST
+
+/* ---------------- Beeper and user LED ---------------- */
+#define BEEP_PORT                       GPIO_BEEP_PORT       /* A07 */
+#define BEEP_PIN                        GPIO_BEEP_PIN
+#define BEEP                            BEEP_PIN
+#define LED_USER_PORT                   GPIO_LED_USER_PORT   /* B04 */
+#define LED_USER_PIN                    GPIO_LED_USER_PIN
+#define LED_USER                        LED_USER_PIN
+
+/* If LED2 uses a 10k series resistor, visible brightness may be low. */
+
+/* ---------------- Keys, active low with internal pull-up ---------------- */
+#define KEY1_PORT                       GPIO_KEYS_KEY1_PORT  /* B14 / SW1 */
+#define KEY1_PIN                        GPIO_KEYS_KEY1_PIN
+#define KEY1                            KEY1_PIN
+#define KEY2_PORT                       GPIO_KEYS_KEY2_PORT  /* B11 / SW2 */
+#define KEY2_PIN                        GPIO_KEYS_KEY2_PIN
+#define KEY2                            KEY2_PIN
+#define KEY3_PORT                       GPIO_KEYS_KEY3_PORT  /* B27 / SW3 */
+#define KEY3_PIN                        GPIO_KEYS_KEY3_PIN
+#define KEY3                            KEY3_PIN
+#define KEY4_PORT                       GPIO_KEYS_KEY4_PORT  /* B26 / SW4 */
+#define KEY4_PIN                        GPIO_KEYS_KEY4_PIN
+#define KEY4                            KEY4_PIN
+
+#define KEY_K1_PORT                     KEY1_PORT
+#define KEY_K1_PIN                      KEY1_PIN
+#define KEY_K2_PORT                     KEY2_PORT
+#define KEY_K2_PIN                      KEY2_PIN
+#define KEY_K3_PORT                     KEY3_PORT
+#define KEY_K3_PIN                      KEY3_PIN
+#define KEY_K4_PORT                     KEY4_PORT
+#define KEY_K4_PIN                      KEY4_PIN
+
+/* ---------------- Servo PWM ----------------
+ * TIMA0 C0..C3, 50Hz, 20ms period, default output disabled unless test macro
+ * enables a center pulse.  Use an independent high-current servo supply and
+ * common ground with the MSPM0 board.
+ */
+#define SERVO_PWM_TIMER_INST            PWM_SERVO_INST
+#define SERVO_PWM_PERIOD_US             20000U
+#define SERVO_MIN_PULSE_US              500U
+#define SERVO_MID_PULSE_US              1500U
+#define SERVO_MAX_PULSE_US              2500U
+#define SERVO1_PWM_CC_INDEX             DL_TIMER_CC_0_INDEX
+#define SERVO2_PWM_CC_INDEX             DL_TIMER_CC_1_INDEX
+#define SERVO3_PWM_CC_INDEX             DL_TIMER_CC_2_INDEX
+#define SERVO4_PWM_CC_INDEX             DL_TIMER_CC_3_INDEX
+#define SERVO1_PWM                      SERVO1_PWM_CC_INDEX
+#define SERVO2_PWM                      SERVO2_PWM_CC_INDEX
+#define SERVO3_PWM                      SERVO3_PWM_CC_INDEX
+#define SERVO4_PWM                      SERVO4_PWM_CC_INDEX
+
+/* ---------------- UARTs ----------------
+ * UART0 is the default USB/debug printf port.
+ * UART1 is reserved for K230/aim link. UART2 and UART3 are reserved.
+ * Do not connect two active TX devices to the same UART RX. External modules
+ * must share ground with the controller.
+ */
+#define SERIAL_UART_INST                UART_DEBUG_INST
+#define SERIAL_UART_IRQN                UART_DEBUG_INST_INT_IRQN
+#define SERIAL_BAUD_RATE                UART_DEBUG_BAUD_RATE
+
+/* ---------------- System tick ---------------- */
+#define SYSTEM_TIMER_INST               TIMER_SYS_INST
+#define SYSTEM_TIMER_IRQN               TIMER_SYS_INST_INT_IRQN
+
+/*
+ * SWDIO/SWCLK are not configured as GPIO here.  Future hardware should route
+ * RST to the SWD connector.
+ *
+ * Reserved headers:
+ * H1: B05, B15, A10, B16, A11, B12.  B05 is a future TB6612_STBY candidate.
+ * H3: B25, B18, B21, B22, A30, B00.
+ */
 
 #endif

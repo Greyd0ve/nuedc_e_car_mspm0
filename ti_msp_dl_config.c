@@ -40,6 +40,9 @@
 
 #include "ti_msp_dl_config.h"
 
+DL_TimerA_backupConfig gPWM_SERVOBackup;
+DL_TimerG_backupConfig gTIMER_SYSBackup;
+
 /*
  *  ======== SYSCFG_DL_init ========
  *  Perform any initialization needed before using any board APIs
@@ -51,25 +54,58 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     /* Module-Specific Initializations*/
     SYSCFG_DL_SYSCTL_init();
     SYSCFG_DL_PWM_MOTOR_init();
+    SYSCFG_DL_PWM_SERVO_init();
     SYSCFG_DL_TIMER_SYS_init();
-    SYSCFG_DL_UART_MAIN_init();
+    SYSCFG_DL_I2C_SHARED_init();
+    SYSCFG_DL_UART_DEBUG_init();
+    /* Ensure backup structures have no valid state */
+	gPWM_SERVOBackup.backupRdy 	= false;
+	gTIMER_SYSBackup.backupRdy 	= false;
+
+
+}
+/*
+ * User should take care to save and restore register configuration in application.
+ * See Retention Configuration section for more details.
+ */
+SYSCONFIG_WEAK bool SYSCFG_DL_saveConfiguration(void)
+{
+    bool retStatus = true;
+
+	retStatus &= DL_TimerA_saveConfiguration(PWM_SERVO_INST, &gPWM_SERVOBackup);
+	retStatus &= DL_TimerG_saveConfiguration(TIMER_SYS_INST, &gTIMER_SYSBackup);
+
+    return retStatus;
 }
 
 
+SYSCONFIG_WEAK bool SYSCFG_DL_restoreConfiguration(void)
+{
+    bool retStatus = true;
+
+	retStatus &= DL_TimerA_restoreConfiguration(PWM_SERVO_INST, &gPWM_SERVOBackup, false);
+	retStatus &= DL_TimerG_restoreConfiguration(TIMER_SYS_INST, &gTIMER_SYSBackup, false);
+
+    return retStatus;
+}
 
 SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
 {
     DL_GPIO_reset(GPIOA);
     DL_GPIO_reset(GPIOB);
     DL_TimerG_reset(PWM_MOTOR_INST);
+    DL_TimerA_reset(PWM_SERVO_INST);
     DL_TimerG_reset(TIMER_SYS_INST);
-    DL_UART_Main_reset(UART_MAIN_INST);
+    DL_I2C_reset(I2C_SHARED_INST);
+    DL_UART_Main_reset(UART_DEBUG_INST);
 
     DL_GPIO_enablePower(GPIOA);
     DL_GPIO_enablePower(GPIOB);
     DL_TimerG_enablePower(PWM_MOTOR_INST);
+    DL_TimerA_enablePower(PWM_SERVO_INST);
     DL_TimerG_enablePower(TIMER_SYS_INST);
-    DL_UART_Main_enablePower(UART_MAIN_INST);
+    DL_I2C_enablePower(I2C_SHARED_INST);
+    DL_UART_Main_enablePower(UART_DEBUG_INST);
     delay_cycles(POWER_STARTUP_DELAY);
 }
 
@@ -80,86 +116,109 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
     DL_GPIO_enableOutput(GPIO_PWM_MOTOR_C0_PORT, GPIO_PWM_MOTOR_C0_PIN);
     DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_MOTOR_C1_IOMUX,GPIO_PWM_MOTOR_C1_IOMUX_FUNC);
     DL_GPIO_enableOutput(GPIO_PWM_MOTOR_C1_PORT, GPIO_PWM_MOTOR_C1_PIN);
+    DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_SERVO_C0_IOMUX,GPIO_PWM_SERVO_C0_IOMUX_FUNC);
+    DL_GPIO_enableOutput(GPIO_PWM_SERVO_C0_PORT, GPIO_PWM_SERVO_C0_PIN);
+    DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_SERVO_C1_IOMUX,GPIO_PWM_SERVO_C1_IOMUX_FUNC);
+    DL_GPIO_enableOutput(GPIO_PWM_SERVO_C1_PORT, GPIO_PWM_SERVO_C1_PIN);
+    DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_SERVO_C2_IOMUX,GPIO_PWM_SERVO_C2_IOMUX_FUNC);
+    DL_GPIO_enableOutput(GPIO_PWM_SERVO_C2_PORT, GPIO_PWM_SERVO_C2_PIN);
+    DL_GPIO_initPeripheralOutputFunction(GPIO_PWM_SERVO_C3_IOMUX,GPIO_PWM_SERVO_C3_IOMUX_FUNC);
+    DL_GPIO_enableOutput(GPIO_PWM_SERVO_C3_PORT, GPIO_PWM_SERVO_C3_PIN);
+
+    DL_GPIO_initPeripheralInputFunctionFeatures(GPIO_I2C_SHARED_IOMUX_SDA,
+        GPIO_I2C_SHARED_IOMUX_SDA_FUNC, DL_GPIO_INVERSION_DISABLE,
+        DL_GPIO_RESISTOR_NONE, DL_GPIO_HYSTERESIS_DISABLE,
+        DL_GPIO_WAKEUP_DISABLE);
+    DL_GPIO_initPeripheralInputFunctionFeatures(GPIO_I2C_SHARED_IOMUX_SCL,
+        GPIO_I2C_SHARED_IOMUX_SCL_FUNC, DL_GPIO_INVERSION_DISABLE,
+        DL_GPIO_RESISTOR_NONE, DL_GPIO_HYSTERESIS_DISABLE,
+        DL_GPIO_WAKEUP_DISABLE);
+    DL_GPIO_enableHiZ(GPIO_I2C_SHARED_IOMUX_SDA);
+    DL_GPIO_enableHiZ(GPIO_I2C_SHARED_IOMUX_SCL);
 
     DL_GPIO_initPeripheralOutputFunction(
-        GPIO_UART_MAIN_IOMUX_TX, GPIO_UART_MAIN_IOMUX_TX_FUNC);
+        GPIO_UART_DEBUG_IOMUX_TX, GPIO_UART_DEBUG_IOMUX_TX_FUNC);
     DL_GPIO_initPeripheralInputFunction(
-        GPIO_UART_MAIN_IOMUX_RX, GPIO_UART_MAIN_IOMUX_RX_FUNC);
+        GPIO_UART_DEBUG_IOMUX_RX, GPIO_UART_DEBUG_IOMUX_RX_FUNC);
 
-    DL_GPIO_initDigitalOutput(GPIO_MOTOR_AIN1_IOMUX);
+    DL_GPIO_initDigitalOutput(GPIO_MOTOR_L_IN1_IOMUX);
 
-    DL_GPIO_initDigitalOutput(GPIO_MOTOR_AIN2_IOMUX);
+    DL_GPIO_initDigitalOutput(GPIO_MOTOR_L_IN2_IOMUX);
 
-    DL_GPIO_initDigitalOutput(GPIO_MOTOR_BIN1_IOMUX);
+    DL_GPIO_initDigitalOutput(GPIO_MOTOR_R_IN1_IOMUX);
 
-    DL_GPIO_initDigitalOutput(GPIO_MOTOR_BIN2_IOMUX);
+    DL_GPIO_initDigitalOutput(GPIO_MOTOR_R_IN2_IOMUX);
 
-    DL_GPIO_initDigitalOutput(GPIO_MOTOR_STBY_IOMUX);
-
-    DL_GPIO_initDigitalInputFeatures(GPIO_ENCODER_E1A_IOMUX,
+    DL_GPIO_initDigitalInputFeatures(GPIO_ENCODER_L_A_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
-    DL_GPIO_initDigitalInputFeatures(GPIO_ENCODER_E1B_IOMUX,
+    DL_GPIO_initDigitalInputFeatures(GPIO_ENCODER_L_B_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
-    DL_GPIO_initDigitalInputFeatures(GPIO_ENCODER_E2A_IOMUX,
+    DL_GPIO_initDigitalInputFeatures(GPIO_ENCODER_R_A_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
-    DL_GPIO_initDigitalInputFeatures(GPIO_ENCODER_E2B_IOMUX,
+    DL_GPIO_initDigitalInputFeatures(GPIO_ENCODER_R_B_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
+
+    DL_GPIO_initDigitalOutput(GPIO_GRAYSCALE_AD2_IOMUX);
+
+    DL_GPIO_initDigitalOutput(GPIO_GRAYSCALE_AD1_IOMUX);
+
+    DL_GPIO_initDigitalOutput(GPIO_GRAYSCALE_AD0_IOMUX);
 
     DL_GPIO_initDigitalInputFeatures(GPIO_GRAYSCALE_OUT_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
-    DL_GPIO_initDigitalOutput(GPIO_GRAYSCALE_AD0_IOMUX);
-
-    DL_GPIO_initDigitalOutput(GPIO_GRAYSCALE_AD1_IOMUX);
-
-    DL_GPIO_initDigitalOutput(GPIO_GRAYSCALE_AD2_IOMUX);
-
-    DL_GPIO_initDigitalInputFeatures(GPIO_KEYS_K1_IOMUX,
+    DL_GPIO_initDigitalInputFeatures(GPIO_KEYS_KEY1_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
-    DL_GPIO_initDigitalInputFeatures(GPIO_KEYS_K2_IOMUX,
+    DL_GPIO_initDigitalInputFeatures(GPIO_KEYS_KEY2_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
-    DL_GPIO_initDigitalInputFeatures(GPIO_KEYS_K3_IOMUX,
+    DL_GPIO_initDigitalInputFeatures(GPIO_KEYS_KEY3_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
-    DL_GPIO_initDigitalInputFeatures(GPIO_KEYS_K4_IOMUX,
+    DL_GPIO_initDigitalInputFeatures(GPIO_KEYS_KEY4_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
 		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
-    DL_GPIO_clearPins(GPIO_GRAYSCALE_PORT, GPIO_GRAYSCALE_AD0_PIN |
+    DL_GPIO_initDigitalOutput(GPIO_BOARD_IO_LED_USER_IOMUX);
+
+    DL_GPIO_initDigitalOutput(GPIO_BOARD_IO_BEEP_IOMUX);
+
+    DL_GPIO_clearPins(GPIOA, GPIO_MOTOR_R_IN1_PIN |
+		GPIO_BOARD_IO_BEEP_PIN);
+    DL_GPIO_enableOutput(GPIOA, GPIO_MOTOR_R_IN1_PIN |
+		GPIO_BOARD_IO_BEEP_PIN);
+    DL_GPIO_setLowerPinsPolarity(GPIOA, DL_GPIO_PIN_14_EDGE_RISE_FALL);
+    DL_GPIO_clearInterruptStatus(GPIOA, GPIO_ENCODER_R_A_PIN);
+    DL_GPIO_enableInterrupt(GPIOA, GPIO_ENCODER_R_A_PIN);
+    DL_GPIO_clearPins(GPIOB, GPIO_MOTOR_L_IN1_PIN |
+		GPIO_MOTOR_L_IN2_PIN |
+		GPIO_MOTOR_R_IN2_PIN |
+		GPIO_GRAYSCALE_AD2_PIN |
 		GPIO_GRAYSCALE_AD1_PIN |
-		GPIO_GRAYSCALE_AD2_PIN);
-    DL_GPIO_enableOutput(GPIO_GRAYSCALE_PORT, GPIO_GRAYSCALE_AD0_PIN |
+		GPIO_GRAYSCALE_AD0_PIN |
+		GPIO_BOARD_IO_LED_USER_PIN);
+    DL_GPIO_enableOutput(GPIOB, GPIO_MOTOR_L_IN1_PIN |
+		GPIO_MOTOR_L_IN2_PIN |
+		GPIO_MOTOR_R_IN2_PIN |
+		GPIO_GRAYSCALE_AD2_PIN |
 		GPIO_GRAYSCALE_AD1_PIN |
-		GPIO_GRAYSCALE_AD2_PIN);
-    DL_GPIO_clearPins(GPIOB, GPIO_MOTOR_AIN1_PIN |
-		GPIO_MOTOR_AIN2_PIN |
-		GPIO_MOTOR_BIN1_PIN |
-		GPIO_MOTOR_BIN2_PIN |
-		GPIO_MOTOR_STBY_PIN);
-    DL_GPIO_enableOutput(GPIOB, GPIO_MOTOR_AIN1_PIN |
-		GPIO_MOTOR_AIN2_PIN |
-		GPIO_MOTOR_BIN1_PIN |
-		GPIO_MOTOR_BIN2_PIN |
-		GPIO_MOTOR_STBY_PIN);
-    DL_GPIO_setLowerPinsPolarity(GPIOB, DL_GPIO_PIN_10_EDGE_RISE_FALL |
-		DL_GPIO_PIN_0_EDGE_RISE_FALL);
-    DL_GPIO_clearInterruptStatus(GPIOB, GPIO_ENCODER_E1A_PIN |
-		GPIO_ENCODER_E2A_PIN);
-    DL_GPIO_enableInterrupt(GPIOB, GPIO_ENCODER_E1A_PIN |
-		GPIO_ENCODER_E2A_PIN);
+		GPIO_GRAYSCALE_AD0_PIN |
+		GPIO_BOARD_IO_LED_USER_PIN);
+    DL_GPIO_setLowerPinsPolarity(GPIOB, DL_GPIO_PIN_6_EDGE_RISE_FALL);
+    DL_GPIO_clearInterruptStatus(GPIOB, GPIO_ENCODER_L_A_PIN);
+    DL_GPIO_enableInterrupt(GPIOB, GPIO_ENCODER_L_A_PIN);
 
 }
 
@@ -228,6 +287,68 @@ SYSCONFIG_WEAK void SYSCFG_DL_PWM_MOTOR_init(void) {
 
 
 }
+/*
+ * Timer clock configuration to be sourced by  / 1 (32000000 Hz)
+ * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
+ *   1000000 Hz = 32000000 Hz / (1 * (31 + 1))
+ */
+static const DL_TimerA_ClockConfig gPWM_SERVOClockConfig = {
+    .clockSel = DL_TIMER_CLOCK_BUSCLK,
+    .divideRatio = DL_TIMER_CLOCK_DIVIDE_1,
+    .prescale = 31U
+};
+
+static const DL_TimerA_PWMConfig gPWM_SERVOConfig = {
+    .pwmMode = DL_TIMER_PWM_MODE_EDGE_ALIGN,
+    .period = 20000,
+    .isTimerWithFourCC = true,
+    .startTimer = DL_TIMER_STOP,
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_PWM_SERVO_init(void) {
+
+    DL_TimerA_setClockConfig(
+        PWM_SERVO_INST, (DL_TimerA_ClockConfig *) &gPWM_SERVOClockConfig);
+
+    DL_TimerA_initPWMMode(
+        PWM_SERVO_INST, (DL_TimerA_PWMConfig *) &gPWM_SERVOConfig);
+
+    DL_TimerA_setCaptureCompareOutCtl(PWM_SERVO_INST, DL_TIMER_CC_OCTL_INIT_VAL_LOW,
+		DL_TIMER_CC_OCTL_INV_OUT_DISABLED, DL_TIMER_CC_OCTL_SRC_FUNCVAL,
+		DL_TIMERA_CAPTURE_COMPARE_0_INDEX);
+
+    DL_TimerA_setCaptCompUpdateMethod(PWM_SERVO_INST, DL_TIMER_CC_UPDATE_METHOD_IMMEDIATE, DL_TIMERA_CAPTURE_COMPARE_0_INDEX);
+    DL_TimerA_setCaptureCompareValue(PWM_SERVO_INST, 20000, DL_TIMER_CC_0_INDEX);
+
+    DL_TimerA_setCaptureCompareOutCtl(PWM_SERVO_INST, DL_TIMER_CC_OCTL_INIT_VAL_LOW,
+		DL_TIMER_CC_OCTL_INV_OUT_DISABLED, DL_TIMER_CC_OCTL_SRC_FUNCVAL,
+		DL_TIMERA_CAPTURE_COMPARE_1_INDEX);
+
+    DL_TimerA_setCaptCompUpdateMethod(PWM_SERVO_INST, DL_TIMER_CC_UPDATE_METHOD_IMMEDIATE, DL_TIMERA_CAPTURE_COMPARE_1_INDEX);
+    DL_TimerA_setCaptureCompareValue(PWM_SERVO_INST, 20000, DL_TIMER_CC_1_INDEX);
+
+    DL_TimerA_setCaptureCompareOutCtl(PWM_SERVO_INST, DL_TIMER_CC_OCTL_INIT_VAL_LOW,
+		DL_TIMER_CC_OCTL_INV_OUT_DISABLED, DL_TIMER_CC_OCTL_SRC_FUNCVAL,
+		DL_TIMERA_CAPTURE_COMPARE_2_INDEX);
+
+    DL_TimerA_setCaptCompUpdateMethod(PWM_SERVO_INST, DL_TIMER_CC_UPDATE_METHOD_IMMEDIATE, DL_TIMERA_CAPTURE_COMPARE_2_INDEX);
+    DL_TimerA_setCaptureCompareValue(PWM_SERVO_INST, 20000, DL_TIMER_CC_2_INDEX);
+
+    DL_TimerA_setCaptureCompareOutCtl(PWM_SERVO_INST, DL_TIMER_CC_OCTL_INIT_VAL_LOW,
+		DL_TIMER_CC_OCTL_INV_OUT_DISABLED, DL_TIMER_CC_OCTL_SRC_FUNCVAL,
+		DL_TIMERA_CAPTURE_COMPARE_3_INDEX);
+
+    DL_TimerA_setCaptCompUpdateMethod(PWM_SERVO_INST, DL_TIMER_CC_UPDATE_METHOD_IMMEDIATE, DL_TIMERA_CAPTURE_COMPARE_3_INDEX);
+    DL_TimerA_setCaptureCompareValue(PWM_SERVO_INST, 20000, DL_TIMER_CC_3_INDEX);
+
+    DL_TimerA_enableClock(PWM_SERVO_INST);
+
+
+    
+    DL_TimerA_setCCPDirection(PWM_SERVO_INST , DL_TIMER_CC0_OUTPUT | DL_TIMER_CC1_OUTPUT | DL_TIMER_CC2_OUTPUT | DL_TIMER_CC3_OUTPUT );
+
+
+}
 
 
 
@@ -269,13 +390,39 @@ SYSCONFIG_WEAK void SYSCFG_DL_TIMER_SYS_init(void) {
 }
 
 
+static const DL_I2C_ClockConfig gI2C_SHAREDClockConfig = {
+    .clockSel = DL_I2C_CLOCK_BUSCLK,
+    .divideRatio = DL_I2C_CLOCK_DIVIDE_1,
+};
 
-static const DL_UART_Main_ClockConfig gUART_MAINClockConfig = {
+SYSCONFIG_WEAK void SYSCFG_DL_I2C_SHARED_init(void) {
+
+    DL_I2C_setClockConfig(I2C_SHARED_INST,
+        (DL_I2C_ClockConfig *) &gI2C_SHAREDClockConfig);
+    DL_I2C_disableAnalogGlitchFilter(I2C_SHARED_INST);
+
+    /* Configure Controller Mode */
+    DL_I2C_resetControllerTransfer(I2C_SHARED_INST);
+    /* Set frequency to 400000 Hz*/
+    DL_I2C_setTimerPeriod(I2C_SHARED_INST, 7);
+    DL_I2C_setControllerTXFIFOThreshold(I2C_SHARED_INST, DL_I2C_TX_FIFO_LEVEL_EMPTY);
+    DL_I2C_setControllerRXFIFOThreshold(I2C_SHARED_INST, DL_I2C_RX_FIFO_LEVEL_BYTES_1);
+    DL_I2C_enableControllerClockStretching(I2C_SHARED_INST);
+
+
+    /* Enable module */
+    DL_I2C_enableController(I2C_SHARED_INST);
+
+
+}
+
+
+static const DL_UART_Main_ClockConfig gUART_DEBUGClockConfig = {
     .clockSel    = DL_UART_MAIN_CLOCK_BUSCLK,
     .divideRatio = DL_UART_MAIN_CLOCK_DIVIDE_RATIO_1
 };
 
-static const DL_UART_Main_Config gUART_MAINConfig = {
+static const DL_UART_Main_Config gUART_DEBUGConfig = {
     .mode        = DL_UART_MAIN_MODE_NORMAL,
     .direction   = DL_UART_MAIN_DIRECTION_TX_RX,
     .flowControl = DL_UART_MAIN_FLOW_CONTROL_NONE,
@@ -284,25 +431,25 @@ static const DL_UART_Main_Config gUART_MAINConfig = {
     .stopBits    = DL_UART_MAIN_STOP_BITS_ONE
 };
 
-SYSCONFIG_WEAK void SYSCFG_DL_UART_MAIN_init(void)
+SYSCONFIG_WEAK void SYSCFG_DL_UART_DEBUG_init(void)
 {
-    DL_UART_Main_setClockConfig(UART_MAIN_INST, (DL_UART_Main_ClockConfig *) &gUART_MAINClockConfig);
+    DL_UART_Main_setClockConfig(UART_DEBUG_INST, (DL_UART_Main_ClockConfig *) &gUART_DEBUGClockConfig);
 
-    DL_UART_Main_init(UART_MAIN_INST, (DL_UART_Main_Config *) &gUART_MAINConfig);
+    DL_UART_Main_init(UART_DEBUG_INST, (DL_UART_Main_Config *) &gUART_DEBUGConfig);
     /*
      * Configure baud rate by setting oversampling and baud rate divisors.
-     *  Target baud rate: 9600
-     *  Actual baud rate: 9600.24
+     *  Target baud rate: 115200
+     *  Actual baud rate: 115211.52
      */
-    DL_UART_Main_setOversampling(UART_MAIN_INST, DL_UART_OVERSAMPLING_RATE_16X);
-    DL_UART_Main_setBaudRateDivisor(UART_MAIN_INST, UART_MAIN_IBRD_32_MHZ_9600_BAUD, UART_MAIN_FBRD_32_MHZ_9600_BAUD);
+    DL_UART_Main_setOversampling(UART_DEBUG_INST, DL_UART_OVERSAMPLING_RATE_16X);
+    DL_UART_Main_setBaudRateDivisor(UART_DEBUG_INST, UART_DEBUG_IBRD_32_MHZ_115200_BAUD, UART_DEBUG_FBRD_32_MHZ_115200_BAUD);
 
 
     /* Configure Interrupts */
-    DL_UART_Main_enableInterrupt(UART_MAIN_INST,
+    DL_UART_Main_enableInterrupt(UART_DEBUG_INST,
                                  DL_UART_MAIN_INTERRUPT_RX);
 
 
-    DL_UART_Main_enable(UART_MAIN_INST);
+    DL_UART_Main_enable(UART_DEBUG_INST);
 }
 

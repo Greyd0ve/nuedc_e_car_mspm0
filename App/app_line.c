@@ -4,8 +4,11 @@
 #include "Grayscale.h"
 #include <stdint.h>
 
+/* 8 路灰度循迹处理，硬件通过 CD4051 多路复用读取。
+ * 若传感器物理方向装反，可通过 g_lineReverseOrderF 反转逻辑顺序，无需改线。
+ */
 #ifndef GRAYSCALE_CHANNELS
-#define GRAYSCALE_CHANNELS 8U
+#define GRAYSCALE_CHANNELS 8U /* 灰度传感器通道数，默认 8 路 */
 #endif
 
 extern volatile float g_lineBlackLevelF;
@@ -35,6 +38,7 @@ static uint8_t s_badMaskCount = 0U;
 static uint8_t s_zeroMaskCount = 0U;
 static uint8_t s_cornerMaskStableCount = 0U;
 
+/* 对串口调参后的滤波/转向参数做范围限制。 */
 static float App_Line_LimitFloat(float value, float minVal, float maxVal)
 {
     if (value < minVal) return minVal;
@@ -52,6 +56,7 @@ static uint8_t App_Line_IsContinuousMask(uint8_t mask, uint8_t blackCount)
         return 0U;
     }
 
+    /* 正常黑线应形成连续传感器区域，分裂成多个区域时按异常 mask 处理。 */
     while (first < GRAYSCALE_CHANNELS && (mask & (uint8_t)(1U << first)) == 0U)
     {
         first++;
@@ -70,6 +75,7 @@ static uint8_t App_Line_IsContinuousMask(uint8_t mask, uint8_t blackCount)
 
 static void App_Line_HoldLastError(void)
 {
+    /* 短暂无效 mask 时保持上一次有效误差，避免转向命令突变。 */
     g_lineError = s_lastValidError;
 }
 
@@ -80,6 +86,7 @@ void App_Line_GPIOForceInit(void)
 
 void App_Line_ResetState(void)
 {
+    /* 新一轮运行前同时清空公开遥测量和内部滤波状态。 */
     g_lineLostMs = 0;
     g_lineBlackCount = 0U;
     g_lineBadMaskCount = 0U;
@@ -97,6 +104,7 @@ void App_Line_ResetState(void)
 void App_Line_Update(void)
 {
     uint8_t raw[GRAYSCALE_CHANNELS];
+    /* 传感器权重以中心为 0，正值表示黑线偏右。 */
     static const int16_t weight[GRAYSCALE_CHANNELS] = {-350, -250, -150, -50, 50, 150, 250, 350};
     int32_t sum = 0;
     int16_t count = 0;
@@ -117,6 +125,7 @@ void App_Line_Update(void)
 
     Grayscale_ReadAll(raw);
 
+    /* rawMask 保留物理通道顺序，方便板级测试确认接线。 */
     g_lineRawMask = 0;
     for (i = 0; i < GRAYSCALE_CHANNELS; i++)
     {
@@ -128,6 +137,7 @@ void App_Line_Update(void)
         uint8_t physicalIndex;
         uint8_t isBlack;
 
+        /* lineMask 是转向控制使用的逻辑顺序，可按配置反转。 */
         physicalIndex = reverseOrder ? (uint8_t)(GRAYSCALE_CHANNELS - 1U - i) : i;
         isBlack = (raw[physicalIndex] == blackLevel) ? 1U : 0U;
 
@@ -145,6 +155,7 @@ void App_Line_Update(void)
 
     if (count == 0)
     {
+        /* 没有检测到黑线：标记丢线，但保留最近一次有效误差。 */
         g_lineValid = 0U;
         App_Line_HoldLastError();
         if (s_zeroMaskCount < 255U) s_zeroMaskCount++;
@@ -156,6 +167,7 @@ void App_Line_Update(void)
     }
     else if ((uint8_t)count >= cornerBlackCountTh)
     {
+        /* 大面积黑色区域视为角点标记，不作为普通可循迹黑线。 */
         g_lineValid = 0U;
         App_Line_HoldLastError();
         if (s_cornerMaskStableCount < 255U) s_cornerMaskStableCount++;
@@ -166,6 +178,7 @@ void App_Line_Update(void)
         float rawError;
         float alpha;
 
+        /* 普通黑线：对激活通道权重求平均，再做一阶滤波。 */
         rawError = (float)sum / (float)count;
         alpha = App_Line_LimitFloat(g_lineFilterAlpha, 0.0f, 1.0f);
 
@@ -190,6 +203,7 @@ void App_Line_Update(void)
     }
     else
     {
+        /* 非连续或过宽 mask 判为异常，避免车辆跟随噪声转向。 */
         g_lineValid = 0U;
         App_Line_HoldLastError();
         if (s_badMaskCount < 255U) s_badMaskCount++;
@@ -212,6 +226,7 @@ float App_Line_CalcTurnCmd(void)
     dError = error - g_lineLastCtrlError;
     g_lineLastCtrlError = error;
 
+    /* PD 转向辅助函数，供未直接使用完整 E 题状态机的模块调用。 */
     turn = (-g_lineTurnSign) * (error * g_lineKp + dError * g_lineKd);
 
     return App_Line_LimitFloat(turn, -g_lineTurnLimit, g_lineTurnLimit);

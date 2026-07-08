@@ -1,6 +1,9 @@
 #include "Grayscale.h"
 #include "Board_Config.h"
 
+/* 通过 CD4051 读取 8 路灰度输入。
+ * AD0..AD2 选择通道，OUT 作为数字电平采样。
+ */
 static void Grayscale_SetAddress(uint8_t channel)
 {
     if ((channel & 0x01U) != 0U)
@@ -30,11 +33,13 @@ static void Grayscale_SetAddress(uint8_t channel)
         DL_GPIO_clearPins(GRAYSCALE_AD2_PORT, GRAYSCALE_AD2_PIN);
     }
 
+    /* 地址切换后等待模拟开关输出和输入缓冲稳定。 */
     delay_cycles(160U);
 }
 
 void Grayscale_Init(void)
 {
+    /* 默认选择通道 0，等待第一次显式读取。 */
     DL_GPIO_clearPins(GRAYSCALE_AD0_PORT, GRAYSCALE_AD0_PIN);
     DL_GPIO_clearPins(GRAYSCALE_AD1_PORT, GRAYSCALE_AD1_PIN);
     DL_GPIO_clearPins(GRAYSCALE_AD2_PORT, GRAYSCALE_AD2_PIN);
@@ -52,6 +57,7 @@ uint8_t Grayscale_ReadChannel(uint8_t channel)
     uint8_t c;
 
     Grayscale_SetAddress((uint8_t)(channel & 0x07U));
+    /* 连续快速采样 3 次并多数表决，降低单次读数噪声。 */
     a = Grayscale_RawOUT();
     delay_cycles(40U);
     b = Grayscale_RawOUT();
@@ -70,6 +76,7 @@ void Grayscale_ReadAll(uint8_t raw[GRAYSCALE_CHANNELS])
         return;
     }
 
+    /* 按物理通道顺序读取；逻辑顺序反转由 app_line 处理。 */
     for (i = 0U; i < GRAYSCALE_CHANNELS; i++)
     {
         raw[i] = Grayscale_ReadChannel(i);

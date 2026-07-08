@@ -2,8 +2,11 @@
 #include "Board_Config.h"
 #include <stdarg.h>
 
-#define SERIAL_RX_BUF_SIZE 128U
+#define SERIAL_RX_BUF_SIZE 128U /* 串口接收环形缓冲区大小，单位字节 */
 
+/* 中断驱动的 RX 环形缓冲区。
+ * TX 保持阻塞发送，只允许前台短帧调用，不放入高频控制或定时器 ISR。
+ */
 static volatile uint8_t s_rxBuf[SERIAL_RX_BUF_SIZE];
 static volatile uint16_t s_rxHead = 0U;
 static volatile uint16_t s_rxTail = 0U;
@@ -23,6 +26,7 @@ static void Serial_PushRx(uint8_t byte)
 
     if (next == s_rxTail)
     {
+        /* 缓冲区满时丢弃新字节，并累计溢出次数供遥测查看。 */
         s_rxOverflowCount++;
         return;
     }
@@ -35,6 +39,7 @@ static void Serial_PushRx(uint8_t byte)
 
 void Serial_Init(void)
 {
+    /* 使能 UART RX 中断前，先复位软件缓冲区状态。 */
     s_rxHead = 0U;
     s_rxTail = 0U;
     s_rxFlag = 0U;
@@ -47,6 +52,7 @@ void Serial_Init(void)
 
 void Serial_SendByte(uint8_t byte)
 {
+    /* 阻塞式 TX 适合前台短遥测帧，逻辑简单可预测。 */
     DL_UART_Main_transmitDataBlocking(SERIAL_UART_INST, byte);
 }
 
@@ -95,6 +101,7 @@ void Serial_SendNumber(uint32_t number, uint8_t length)
 
 void Serial_Printf(const char *format, ...)
 {
+    /* 使用固定栈缓冲区，避免嵌入式运行时动态分配。 */
     char buffer[128];
     va_list args;
     int len;
@@ -135,6 +142,7 @@ uint8_t Serial_ReadByte(uint8_t *byte)
         return 0U;
     }
 
+    /* 前台单消费者读取；ISR 是唯一生产者。 */
     *byte = s_rxBuf[s_rxTail];
     s_rxTail = Serial_NextIndex(s_rxTail);
     s_rxFlag = (s_rxHead != s_rxTail) ? 1U : 0U;
@@ -146,11 +154,12 @@ uint32_t Serial_GetRxOverflowCount(void)
     return s_rxOverflowCount;
 }
 
-void UART1_IRQHandler(void)
+void UART0_IRQHandler(void)
 {
     switch (DL_UART_Main_getPendingInterrupt(SERIAL_UART_INST))
     {
         case DL_UART_MAIN_IIDX_RX:
+            /* ISR 只把 FIFO 搬进环形缓冲区，协议解析留给前台执行。 */
             while (!DL_UART_Main_isRXFIFOEmpty(SERIAL_UART_INST))
             {
                 Serial_PushRx(DL_UART_Main_receiveData(SERIAL_UART_INST));

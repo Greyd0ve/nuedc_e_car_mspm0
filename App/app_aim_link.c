@@ -3,14 +3,18 @@
 #include "Serial.h"
 #include <stdint.h>
 
+/* 后续 K230 瞄准模块通信预留接口。
+ * 本模块故意不启动电机、不修改目标速度、不解析运动命令；
+ * 只为后续瞄准模块数据提供清晰边界。
+ */
 void AimLink_Init(void)
 {
-    /* Reserved for a dedicated K230 UART or packet bridge. */
+    /* 预留给后续独立 K230 UART 或转发桥初始化。 */
 }
 
 void AimLink_Task100ms(void)
 {
-    /* Intentionally empty until the K230 link is assigned to real hardware. */
+    /* 当前未绑定硬件链路，保持空实现。 */
 }
 
 void AimLink_SendCarState(void)
@@ -25,6 +29,7 @@ void AimLink_SendCarState(void)
         progress = 99U;
     }
 
+    /* 文本帧保持简单，方便 K230 侧固件解析。 */
     switch (state)
     {
         case E_CAR_IDLE:
@@ -60,5 +65,5 @@ void AimLink_SendCarState(void)
 void AimLink_OnAimPacket(const char *packet)
 {
     (void)packet;
-    /* Parse-only entry point reserved. K230 packets must not start the car or drive motors. */
+    /* 仅预留解析入口；K230 数据不得启动小车或直接驱动电机。 */
 }

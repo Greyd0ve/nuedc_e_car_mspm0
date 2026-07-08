@@ -3,6 +3,7 @@
 #include "app_control.h"
 #include "app_e_car.h"
 #include "app_line.h"
+#include "Board_Config.h"
 #include "Key.h"
 #include "Motor.h"
 #include "PWM.h"
@@ -11,11 +12,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define E_SERIAL_PACKET_BUF_SIZE 96U
-#define E_SERIAL_FIELD_MAX       8U
-#define E_SERIAL_FIELD_LEN       16U
-#define E_SERIAL_PLOT_PERIOD_MS  ECAR_SERIAL_PLOT_PERIOD_MS
-#define E_SERIAL_JOYSTICK_ACK_MS 500U
+/* 文本帧串口控制台。
+ * 帧格式为中括号包裹的逗号字段，例如 [ecar,set,base,18]。
+ * 串口解析在前台执行，UART ISR 只负责把字节放入环形缓冲区。
+ */
+#define E_SERIAL_PACKET_BUF_SIZE 96U                      /* 单帧接收缓冲区长度，单位字节 */
+#define E_SERIAL_FIELD_MAX       8U                       /* 单帧最多字段数 */
+#define E_SERIAL_FIELD_LEN       16U                      /* 预留字段长度常量，当前不作为数组长度使用 */
+#define E_SERIAL_PLOT_PERIOD_MS  ECAR_SERIAL_PLOT_PERIOD_MS /* 串口曲线/遥测输出周期，单位 ms */
+#define E_SERIAL_JOYSTICK_ACK_MS 500U                     /* joystick 忽略提示最小间隔，单位 ms */
 
 extern volatile float g_targetForwardSpeed;
 extern volatile float g_targetTurnSpeed;
@@ -45,9 +50,11 @@ static uint32_t s_lastJoystickAckMs = 0U;
 static uint8_t s_joystickAcked = 0U;
 
 #if ECAR_BOARD_TEST_MODE
+/* 板级测试电机输出默认锁定，必须收到 [test,arm] 才允许直接 PWM。 */
 static uint8_t s_boardTestMotorArmed = 0U;
 #endif
 
+/* 简单 ASCII 工具函数，避免在 MCU 上依赖 locale 相关库行为。 */
 static char ESerial_ToLower(char c)
 {
     if (c >= 'A' && c <= 'Z')
@@ -75,6 +82,7 @@ static char *ESerial_Trim(char *text)
 {
     char *end;
 
+    /* 原地去空格：packet 缓冲区只归解析器使用。 */
     while (*text == ' ' || *text == '\t')
     {
         text++;
@@ -100,6 +108,7 @@ static uint8_t ESerial_ParseFloat(const char *text, float *value)
         return 0U;
     }
 
+    /* 拒绝部分解析结果，避免畸形字段被误当成合法调参值。 */
     parsed = strtod(text, &endPtr);
     if (endPtr == text)
     {
@@ -136,6 +145,7 @@ static void ESerial_SendFixedValue(float value, uint8_t decimals)
     int32_t fracPart;
     uint8_t i;
 
+    /* 手动格式化浮点数，避免依赖嵌入式 libc 的 printf 浮点支持。 */
     for (i = 0U; i < decimals; i++)
     {
         scale *= 10;
@@ -221,6 +231,7 @@ static uint8_t ESerial_SetLapFromFloat(const char *replyName, float value)
         return 0U;
     }
 
+    /* 小车运动时拒绝修改目标圈数。 */
     if (!ECar_SetTargetLap((uint8_t)lap))
     {
         Serial_SendString("[status,err,busy]\r\n");
@@ -233,6 +244,7 @@ static uint8_t ESerial_SetLapFromFloat(const char *replyName, float value)
 
 static uint8_t ESerial_SetNamedParam(const char *name, float value)
 {
+    /* 所有可调参数都做范围限制，防止串口噪声写入危险值。 */
     if (ESerial_StrEqualIgnoreCase(name, "target") ||
         ESerial_StrEqualIgnoreCase(name, "base") ||
         ESerial_StrEqualIgnoreCase(name, "base_speed"))
@@ -403,9 +415,10 @@ static uint8_t ESerial_SetNamedParam(const char *name, float value)
     return 0U;
 }
 
-#if ECAR_BOARD_TEST_MODE
+#if ECAR_BOARD_TEST_MODE && ECAR_TEST_MOTOR_ENABLE
 static int16_t ESerial_LimitBoardTestPwm(int32_t value)
 {
+    /* 板级测试 PWM 有独立小限幅，不使用正常 PID 限幅。 */
     if (value > ECAR_BOARD_TEST_PWM_LIMIT)
     {
         return (int16_t)ECAR_BOARD_TEST_PWM_LIMIT;
@@ -416,9 +429,12 @@ static int16_t ESerial_LimitBoardTestPwm(int32_t value)
     }
     return (int16_t)value;
 }
+#endif
 
+#if ECAR_BOARD_TEST_MODE
 static void ESerial_BoardTestStopMotor(void)
 {
+    /* test stop/lock 必须同时清直接 PWM 状态和闭环目标速度。 */
     g_carEnable = 0U;
     g_targetForwardSpeed = 0.0f;
     g_targetTurnSpeed = 0.0f;
@@ -429,10 +445,12 @@ static void ESerial_BoardTestStopMotor(void)
 
 static void ESerial_HandleBoardTest(char *fields[], uint8_t fieldCount, uint8_t commandIndex)
 {
+#if ECAR_TEST_MOTOR_ENABLE
     float leftValue;
     float rightValue;
     int16_t leftPwm;
     int16_t rightPwm;
+#endif
 
     if (fieldCount <= commandIndex)
     {
@@ -443,15 +461,23 @@ static void ESerial_HandleBoardTest(char *fields[], uint8_t fieldCount, uint8_t 
     if (ESerial_StrEqualIgnoreCase(fields[commandIndex], "arm") ||
         ESerial_StrEqualIgnoreCase(fields[commandIndex], "unlock"))
     {
+#if !ECAR_TEST_MOTOR_ENABLE
+        ESerial_BoardTestStopMotor();
+        Serial_SendString("[status,err,motor-test-disabled]\r\n");
+        return;
+#else
+        /* arm 不会启动电机，只允许后续显式 pwm 命令输出。 */
         ESerial_BoardTestStopMotor();
         s_boardTestMotorArmed = 1U;
         Serial_SendString("[status,ok,test,armed]\r\n");
         return;
+#endif
     }
 
     if (ESerial_StrEqualIgnoreCase(fields[commandIndex], "lock") ||
         ESerial_StrEqualIgnoreCase(fields[commandIndex], "disarm"))
     {
+        /* lock 立即取消测试 PWM 权限并停车。 */
         s_boardTestMotorArmed = 0U;
         ESerial_BoardTestStopMotor();
         Serial_SendString("[status,ok,test,locked]\r\n");
@@ -467,6 +493,11 @@ static void ESerial_HandleBoardTest(char *fields[], uint8_t fieldCount, uint8_t 
 
     if (ESerial_StrEqualIgnoreCase(fields[commandIndex], "pwm"))
     {
+#if !ECAR_TEST_MOTOR_ENABLE
+        ESerial_BoardTestStopMotor();
+        Serial_SendString("[status,err,motor-test-disabled]\r\n");
+        return;
+#else
         if (fieldCount <= (uint8_t)(commandIndex + 2U))
         {
             ESerial_SendBadPacket();
@@ -474,6 +505,7 @@ static void ESerial_HandleBoardTest(char *fields[], uint8_t fieldCount, uint8_t 
         }
         if (!s_boardTestMotorArmed)
         {
+            /* 未 arm 前禁止直接 PWM 输出。 */
             Serial_SendString("[status,err,test-locked]\r\n");
             return;
         }
@@ -495,6 +527,7 @@ static void ESerial_HandleBoardTest(char *fields[], uint8_t fieldCount, uint8_t 
         Motor_SetPWM(leftPwm, rightPwm);
         Serial_Printf("[status,ok,test,pwm,%d,%d]\r\n", (int)leftPwm, (int)rightPwm);
         return;
+#endif
     }
 
     ESerial_SendUnknownError(fields[commandIndex]);
@@ -511,6 +544,7 @@ static uint8_t ESerial_SplitFields(char *packet, char *fields[], uint8_t maxFiel
         return 0U;
     }
 
+    /* 将逗号替换为字符串结束符，fields 指针直接指向 s_packet 内部。 */
     fields[count++] = ESerial_Trim(packet);
     p = packet;
     while (*p != '\0')
@@ -553,6 +587,7 @@ static void ESerial_SendParamSnapshot(void)
 
 static void ESerial_SendStateSnapshot(void)
 {
+    /* 状态快照较长，必须保持在前台串口任务中发送。 */
     Serial_Printf("[ecar,state,state,%u,targetLap,%u,lapCount,%u,cornerCount,%u,runningTimeMs,%lu,",
                   (unsigned int)ECar_GetState(),
                   (unsigned int)ECar_GetTargetLap(),
@@ -615,6 +650,7 @@ static void ESerial_HandleKey(char *fields[], uint8_t fieldCount)
 
 static void ESerial_HandleJoystick(void)
 {
+    /* joystick 包只偶尔回提示，不参与小车运动控制。 */
     if (!s_joystickAcked ||
         (uint32_t)(s_serialMs - s_lastJoystickAckMs) >= E_SERIAL_JOYSTICK_ACK_MS)
     {
@@ -645,6 +681,7 @@ static void ESerial_HandleECar(char *fields[], uint8_t fieldCount)
     if (ESerial_StrEqualIgnoreCase(fields[1], "start"))
     {
 #if ECAR_ENABLE_REMOTE_START
+        /* 远程启动必须通过编译期开关显式启用。 */
         ECar_Start();
         Serial_SendString("[status,ok,start]\r\n");
 #else
@@ -732,6 +769,7 @@ static void ESerial_HandlePacket(char *packet)
     if (ESerial_StrEqualIgnoreCase(fields[0], "start"))
     {
 #if ECAR_ENABLE_REMOTE_START
+        /* 远程启动必须通过编译期开关显式启用。 */
         ECar_Start();
         Serial_SendString("[status,ok,start]\r\n");
 #else
@@ -780,7 +818,7 @@ void ECar_Serial_Init(void)
 #if ECAR_BOARD_TEST_MODE
     s_boardTestMotorArmed = 0U;
 #endif
-    Serial_SendString("[status,ok,serial,9600]\r\n");
+    Serial_Printf("[status,ok,serial,%u]\r\n", (unsigned int)SERIAL_BAUD_RATE);
 #if ECAR_BOARD_TEST_MODE
     Serial_SendString("[status,ok,board-test]\r\n");
 #endif
@@ -795,12 +833,14 @@ void ECar_SerialProcess(void)
         return;
     }
 
+    /* 消费 UART 环形缓冲区所有字节；解析逻辑不放进中断。 */
     while (Serial_ReadByte(&byte))
     {
         char ch = (char)byte;
 
         if (ch == '[')
         {
+            /* 收到新的 '[' 时重新同步，可从噪声或残缺帧中恢复。 */
             s_receiving = 1U;
             s_packetLen = 0U;
             continue;
@@ -851,6 +891,7 @@ static void ESerial_SendBoardTestTelemetry(void)
 {
     static uint8_t phase = 0U;
 
+    /* 板测遥测分 4 种帧轮流输出，避免单次 100ms 发送过长。 */
     switch (phase)
     {
         case 0U:
@@ -899,6 +940,7 @@ static void ESerial_PeriodicTelemetry(uint16_t periodMs)
         return;
     }
 
+    /* periodMs 由调用者传入，因此该函数也能用于 10ms 任务累计。 */
     s_serialMs += periodMs;
     s_plotMs += periodMs;
     if (s_plotMs < E_SERIAL_PLOT_PERIOD_MS)

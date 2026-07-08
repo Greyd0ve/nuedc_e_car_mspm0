@@ -1,5 +1,6 @@
 #include "pid.h"
 
+/* 通用位置式 PID 核心，前进速度环和转向差速环共用。 */
 static float PID_LimitFloat(float value, float minVal, float maxVal)
 {
     if (value < minVal) return minVal;
@@ -57,11 +58,13 @@ float PID_Calc(PID_TypeDef *pid, float target, float measure)
     derivative = error - pid->LastError;
     integralCandidate = pid->Integral + error;
 
+    /* 先限制积分候选值，再计算输出，减少积分饱和。 */
     integralCandidate = PID_LimitFloat(integralCandidate, -pid->IntegralLimit, pid->IntegralLimit);
     output = pid->Kp * error + pid->Ki * integralCandidate + pid->Kd * derivative;
 
     if (output > pid->OutputLimit)
     {
+        /* 条件积分：输出饱和时只允许有助于退出饱和的积分更新。 */
         output = pid->OutputLimit;
         if (error < 0.0f) pid->Integral = integralCandidate;
     }

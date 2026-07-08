@@ -11,18 +11,23 @@
 #include "cmsis_compiler.h"
 #include <stdint.h>
 
-#define E_CAR_CONTROL_PERIOD_MS      ECAR_CONTROL_PERIOD_MS
-#define E_CAR_TARGET_LAP_MIN         1U
-#define E_CAR_TARGET_LAP_MAX         5U
-#define E_CAR_TURN_SIGN              1.0f
+/* E 题小车状态机。
+ * MSPM0 负责循迹、电机控制、编码器计圈、按键、OLED 状态和串口调参。
+ * 远程启动保持默认禁用，必须编译期开关显式打开。
+ */
+#define E_CAR_CONTROL_PERIOD_MS      ECAR_CONTROL_PERIOD_MS /* 状态机控制周期，单位 ms */
+#define E_CAR_TARGET_LAP_MIN         1U                     /* 最小目标圈数 */
+#define E_CAR_TARGET_LAP_MAX         5U                     /* 最大目标圈数 */
+#define E_CAR_TURN_SIGN              1.0f                   /* 角点固定转向方向符号，必要时调正负 */
 
-#define E_CAR_FAULT_NONE             0U
-#define E_CAR_FAULT_LINE_LOST        1U
-#define E_CAR_FAULT_RECOVER_TIMEOUT  2U
-#define E_CAR_FAULT_CORNER_TIMEOUT   3U
+#define E_CAR_FAULT_NONE             0U /* 无故障 */
+#define E_CAR_FAULT_LINE_LOST        1U /* 普通循迹阶段丢线超时 */
+#define E_CAR_FAULT_RECOVER_TIMEOUT  2U /* 角点后恢复循迹超时 */
+#define E_CAR_FAULT_CORNER_TIMEOUT   3U /* 角点转向阶段超时 */
 
 ECarParam_t g_eCarParam =
 {
+    /* 运动默认值偏保守，实际比赛速度建议通过串口逐步调高。 */
     ECAR_DEFAULT_BASE_SPEED_CMPS,
     ECAR_DEFAULT_RECOVER_SPEED_CMPS,
     ECAR_DEFAULT_CORNER_FORWARD_CMPS,
@@ -90,6 +95,9 @@ volatile uint8_t g_lineCornerMaskStableCount = 0U;
 volatile int8_t g_lastLineDir = 1;
 volatile uint16_t g_lineLostMs = 0U;
 
+/* 私有运行状态。
+ * 部分状态会被不同前台任务读取，因此保留 volatile；更新仍不放在长中断中执行。
+ */
 static volatile ECarState_t s_state = E_CAR_IDLE;
 static volatile uint8_t s_targetLap = 1U;
 static volatile uint8_t s_lapCount = 0U;
@@ -118,6 +126,7 @@ static float ECar_LimitFloat(float value, float minVal, float maxVal)
 
 static uint8_t ECar_IsMotionState(ECarState_t state)
 {
+    /* 只有这些状态允许累计运动时间并输出运动命令。 */
     return (uint8_t)(state == E_CAR_LINE_RUN ||
                      state == E_CAR_CORNER_ENTER ||
                      state == E_CAR_CORNER_TURN ||
@@ -126,17 +135,20 @@ static uint8_t ECar_IsMotionState(ECarState_t state)
 
 static int32_t ECar_GetForwardPulse(void)
 {
+    /* 前进距离使用左右编码器总脉冲平均值，单位为原始脉冲。 */
     return g_forwardEncoderTotal;
 }
 
 static void ECar_SetState(ECarState_t state)
 {
+    /* 每次状态切换都清零状态持续时间，供各状态超时判断使用。 */
     s_state = state;
     s_stateMs = 0U;
 }
 
 static void ECar_PromptStart(uint16_t ms)
 {
+    /* 短提示由 1ms tick 递减，不阻塞主循环。 */
     s_promptMs = ms;
     if (ms > 0U)
     {
@@ -166,6 +178,7 @@ void ECar_PromptTick1ms(void)
 
 static void ECar_SafeStop(void)
 {
+    /* 本地先明确清目标/使能，再交给统一硬停车函数处理。 */
     g_targetForwardSpeed = 0.0f;
     g_targetTurnSpeed = 0.0f;
     g_carEnable = 0U;
@@ -174,6 +187,7 @@ static void ECar_SafeStop(void)
 
 static void ECar_ClearEncoderTotals(void)
 {
+    /* 清零总脉冲和待处理增量时要屏蔽编码器中断更新。 */
     __disable_irq();
     g_leftEncoderTotal = 0;
     g_rightEncoderTotal = 0;
@@ -187,6 +201,7 @@ static void ECar_ClearEncoderTotals(void)
 
 static void ECar_SyncLineParams(void)
 {
+    /* app_line 读取全局循迹参数，这里把 E 题当前调参同步过去。 */
     g_lineKp = g_eCarParam.line_kp;
     g_lineKd = g_eCarParam.line_kd;
     g_lineTurnLimit = g_eCarParam.turn_limit;
@@ -194,6 +209,7 @@ static void ECar_SyncLineParams(void)
 
 static void ECar_ResetLineState(void)
 {
+    /* 同时清空 app_line 内部状态和状态机侧的循迹记忆。 */
     App_Line_ResetState();
     g_lineError = 0;
     g_lineValid = 0U;
@@ -211,6 +227,7 @@ static void ECar_ResetLineState(void)
 
 static void ECar_ResetRunData(void)
 {
+    /* 新一轮运行不能继承上一轮圈数、角点、故障或编码器历史。 */
     ECar_ClearEncoderTotals();
     ECar_ResetLineState();
 
@@ -250,6 +267,7 @@ static void ECar_UpdateLapProgress(void)
         defaultPulse = 1;
     }
 
+    /* 进度只用于显示和遥测，真正完赛仍以角点计圈为准。 */
     progress = (float)lapPulse / (float)defaultPulse;
     s_lapProgress = ECar_LimitFloat(progress, 0.0f, 0.999f);
 }
@@ -264,6 +282,7 @@ static float ECar_CalcLineTurnCmd(void)
     dError = error - s_lastLineError;
     s_lastLineError = error;
 
+    /* PD 循迹转向，正负方向由 g_lineTurnSign 统一校正。 */
     turn = (-g_lineTurnSign) * (error * g_eCarParam.line_kp + dError * g_eCarParam.line_kd);
     return ECar_LimitFloat(turn, -g_eCarParam.turn_limit, g_eCarParam.turn_limit);
 }
@@ -272,12 +291,14 @@ static float ECar_CalcSearchTurnCmd(void)
 {
     float sign;
 
+    /* 丢线搜索时向最近一次检测到黑线的方向偏转。 */
     sign = (s_lastLineError >= 0.0f) ? 1.0f : -1.0f;
     return (-g_lineTurnSign) * sign * g_eCarParam.turn_limit * 0.45f;
 }
 
 static void ECar_SetSpeedCmd(float forward, float turn)
 {
+    /* PID 层读取这里的目标：forward 为 cm/s，turn 为左右轮差速 cm/s。 */
     g_targetForwardSpeed = forward;
     g_targetTurnSpeed = turn;
     g_carEnable = 1U;
@@ -297,12 +318,14 @@ static uint8_t ECar_IsCornerDetected(void)
 
     if (g_lineBlackCount < cornerBlackCountTh)
     {
+        /* 黑色通道数不足阈值时，不认为是角点，只可能是普通线或噪声。 */
         s_cornerCandidateCount = 0U;
         return 0U;
     }
 
     if (g_lineCornerMaskStableCount < ECAR_CORNER_CONFIRM_COUNT)
     {
+        /* 依赖 app_line 的稳定计数过滤单次黑色毛刺。 */
         return 0U;
     }
 
@@ -310,6 +333,7 @@ static uint8_t ECar_IsCornerDetected(void)
     interval = pulse - s_lastCornerForwardPulse;
     if (interval < g_eCarParam.min_corner_interval_pulse)
     {
+        /* 间隔不足只清本状态机候选计数，不破坏 app_line 的稳定计数。 */
         s_cornerCandidateCount = 0U;
         return 0U;
     }
@@ -328,6 +352,7 @@ static uint8_t ECar_IsStableLineAfterCorner(void)
 
     if (!g_lineValid)
     {
+        /* 角点后恢复要求重新看到窄且连续的正常黑线，而不是角点黑块。 */
         return 0U;
     }
 
@@ -346,6 +371,7 @@ static uint8_t ECar_IsStableLineAfterCorner(void)
 
 static void ECar_EnterFault(uint8_t faultCode)
 {
+    /* 进入故障状态时先停车，再记录故障码并提示。 */
     s_faultCode = faultCode;
     ECar_SafeStop();
     ECar_SetState(E_CAR_FAULT);
@@ -354,6 +380,7 @@ static void ECar_EnterFault(uint8_t faultCode)
 
 static void ECar_EnterFinish(void)
 {
+    /* 完赛状态保持停车，并将显示进度置为接近 100%。 */
     s_lapProgress = 0.999f;
     ECar_SafeStop();
     ECar_SetState(E_CAR_FINISH);
@@ -362,6 +389,7 @@ static void ECar_EnterFinish(void)
 
 static void ECar_EnterRecover(void)
 {
+    /* 角点转向后进入恢复状态，等待稳定普通黑线。 */
     s_lostMs = 0U;
     s_recoverStableMsCount = 0U;
     ECar_SetState(E_CAR_LINE_RECOVER);
@@ -373,16 +401,19 @@ static void ECar_HandleLineRun(void)
 
     if (g_lineValid)
     {
+        /* 正常循迹路径。 */
         s_lostMs = 0U;
         turnCmd = ECar_CalcLineTurnCmd();
     }
     else if (g_lineBlackCount >= g_eCarParam.corner_black_count_th)
     {
+        /* 角点候选黑块不计入丢线。 */
         s_lostMs = 0U;
         turnCmd = ECar_CalcLineTurnCmd();
     }
     else
     {
+        /* 无效或噪声 mask 会开始丢线计时，并进入搜索转向。 */
         if (s_lostMs < 60000U)
         {
             s_lostMs += E_CAR_CONTROL_PERIOD_MS;
@@ -410,6 +441,7 @@ static void ECar_HandleCornerEnter(void)
 {
     int32_t pulse;
 
+    /* 每进入一次 CORNER_ENTER 只计一个角点。 */
     pulse = ECar_GetForwardPulse();
     s_lastCornerForwardPulse = pulse;
     s_cornerCandidateCount = 0U;
@@ -421,6 +453,7 @@ static void ECar_HandleCornerEnter(void)
 
     if ((s_cornerCount % 4U) == 0U)
     {
+        /* E 题方形赛道按四个角点计一圈。 */
         if (s_lapCount < 250U)
         {
             s_lapCount++;
@@ -444,6 +477,7 @@ static void ECar_HandleCornerEnter(void)
 
 static void ECar_HandleCornerTurn(void)
 {
+    /* 角点黑块区域采用开环转弯，保证动作可预测。 */
     ECar_SetSpeedCmd(g_eCarParam.corner_forward_speed,
                      g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN);
 
@@ -476,6 +510,7 @@ static void ECar_HandleRecover(void)
 
     if (g_lineValid)
     {
+        /* 重新看到正常黑线后，用恢复速度闭环跟线。 */
         s_lostMs = 0U;
         turnCmd = ECar_CalcLineTurnCmd();
     }
@@ -517,6 +552,7 @@ static void ECar_HandleRecover(void)
 
     recoverTimeoutMs = (uint32_t)g_eCarParam.lost_timeout_ms +
                        (uint32_t)g_eCarParam.recover_stable_ms + 500U;
+    /* 恢复阶段有独立超时，避免小车长时间原地找线。 */
     if (s_stateMs >= recoverTimeoutMs)
     {
         ECar_EnterFault(E_CAR_FAULT_RECOVER_TIMEOUT);
@@ -542,6 +578,7 @@ void ECar_Reset(void)
 
 void ECar_Start(void)
 {
+    /* 启动状态机前先限制目标圈数范围。 */
     if (s_targetLap < E_CAR_TARGET_LAP_MIN)
     {
         s_targetLap = E_CAR_TARGET_LAP_MIN;
@@ -552,6 +589,7 @@ void ECar_Start(void)
     }
 
 #if ECAR_BOARD_TEST_MODE
+    /* 板级测试模式下，启动命令不会进入自动循迹运行。 */
     ECar_SyncLineParams();
     ECar_SafeStop();
     ECar_ResetRunData();
@@ -582,6 +620,7 @@ void ECar_Stop(void)
 
 void ECar_Control10ms(void)
 {
+    /* 灰度读取、状态机和 PID 均在前台 10ms 任务执行，不放进定时器 ISR。 */
     ECar_SyncLineParams();
     App_Line_Update();
 
@@ -607,6 +646,7 @@ void ECar_Control10ms(void)
         case E_CAR_READY:
         case E_CAR_FINISH:
         case E_CAR_FAULT:
+            /* 非运动状态持续强制 PWM 为 0。 */
             ECar_SafeStop();
             break;
 
@@ -646,6 +686,7 @@ void ECar_KeyProcess(void)
 
     if (key == 1U)
     {
+        /* K1：仅在非运动状态下循环选择目标圈数。 */
         if (!ECar_IsMotionState(s_state) && s_state != E_CAR_FAULT)
         {
             s_targetLap++;
@@ -662,6 +703,7 @@ void ECar_KeyProcess(void)
 
     if (key == 2U)
     {
+        /* K2：仅在非运动、非故障状态下启动。 */
         if (!ECar_IsMotionState(s_state) && s_state != E_CAR_FAULT)
         {
             ECar_Start();
@@ -671,12 +713,14 @@ void ECar_KeyProcess(void)
 
     if (key == 3U)
     {
+        /* K3：本地停车。 */
         ECar_Stop();
         return;
     }
 
     if (key == 4U)
     {
+        /* K4：故障时复位；非故障时停车并回到 IDLE。 */
         if (s_state == E_CAR_FAULT)
         {
             ECar_Reset();
@@ -697,6 +741,18 @@ void ECar_ShowStatus(void)
     uint8_t progressPercent;
     int32_t lineErr;
 
+    if (!g_carEnable && (s_state == E_CAR_IDLE || s_state == E_CAR_READY))
+    {
+        OLED_Clear();
+        OLED_ShowString(0, 0, "E-Car MSPM0", OLED_8X16);
+        OLED_ShowString(0, 16, "OLED I2C OK", OLED_8X16);
+        OLED_ShowString(0, 32, "SCL PA1 SDA PA0", OLED_8X16);
+        OLED_ShowString(0, 48, "Motor OFF", OLED_8X16);
+        OLED_Update();
+        return;
+    }
+
+    /* 限制显示数值范围，避免 OLED 小字段溢出。 */
     progressPercent = (uint8_t)(s_lapProgress * 100.0f);
     if (progressPercent > 99U)
     {

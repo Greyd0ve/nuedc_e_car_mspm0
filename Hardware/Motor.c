@@ -37,31 +37,25 @@ static void Motor_SetDirection(
 
 void Motor_Init(void)
 {
-#if MOTOR_USE_STBY
-    DL_GPIO_setPins(MOTOR_STBY_PORT, MOTOR_STBY_PIN);
-#endif
     PWM_Init();
     Motor_StopAll();
-#if MOTOR_USE_STBY
-    DL_GPIO_setPins(MOTOR_STBY_PORT, MOTOR_STBY_PIN);
-#endif
 }
 
 void Motor_SetLeftPWM(int16_t pwm)
 {
-    int16_t signedPwm = Motor_ClampPWM((int16_t)(pwm * LEFT_MOTOR_DIR_SIGN));
+    int16_t signedPwm = Motor_ClampPWM((int16_t)(pwm * LEFT_MOTOR_DIR));
     uint16_t duty = (signedPwm < 0) ? (uint16_t)(-signedPwm) : (uint16_t)signedPwm;
 
-    Motor_SetDirection(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN, MOTOR_AIN2_PORT, MOTOR_AIN2_PIN, signedPwm);
+    Motor_SetDirection(MOTOR_L_IN1_PORT, MOTOR_L_IN1_PIN, MOTOR_L_IN2_PORT, MOTOR_L_IN2_PIN, signedPwm);
     PWM_SetCompareA(duty);
 }
 
 void Motor_SetRightPWM(int16_t pwm)
 {
-    int16_t signedPwm = Motor_ClampPWM((int16_t)(pwm * RIGHT_MOTOR_DIR_SIGN));
+    int16_t signedPwm = Motor_ClampPWM((int16_t)(pwm * RIGHT_MOTOR_DIR));
     uint16_t duty = (signedPwm < 0) ? (uint16_t)(-signedPwm) : (uint16_t)signedPwm;
 
-    Motor_SetDirection(MOTOR_BIN1_PORT, MOTOR_BIN1_PIN, MOTOR_BIN2_PORT, MOTOR_BIN2_PIN, signedPwm);
+    Motor_SetDirection(MOTOR_R_IN1_PORT, MOTOR_R_IN1_PIN, MOTOR_R_IN2_PORT, MOTOR_R_IN2_PIN, signedPwm);
     PWM_SetCompareB(duty);
 }
 
@@ -75,8 +69,8 @@ void Motor_StopAll(void)
 {
     PWM_SetCompareA(0U);
     PWM_SetCompareB(0U);
-    DL_GPIO_clearPins(MOTOR_AIN1_PORT, MOTOR_AIN1_PIN);
-    DL_GPIO_clearPins(MOTOR_AIN2_PORT, MOTOR_AIN2_PIN);
-    DL_GPIO_clearPins(MOTOR_BIN1_PORT, MOTOR_BIN1_PIN);
-    DL_GPIO_clearPins(MOTOR_BIN2_PORT, MOTOR_BIN2_PIN);
+    DL_GPIO_clearPins(MOTOR_L_IN1_PORT, MOTOR_L_IN1_PIN);
+    DL_GPIO_clearPins(MOTOR_L_IN2_PORT, MOTOR_L_IN2_PIN);
+    DL_GPIO_clearPins(MOTOR_R_IN1_PORT, MOTOR_R_IN1_PIN);
+    DL_GPIO_clearPins(MOTOR_R_IN2_PORT, MOTOR_R_IN2_PIN);
 }

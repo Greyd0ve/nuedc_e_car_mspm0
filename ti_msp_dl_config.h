@@ -96,105 +96,161 @@ extern "C" {
 #define GPIO_PWM_MOTOR_C1_IOMUX_FUNC                 IOMUX_PINCM35_PF_TIMG0_CCP1
 #define GPIO_PWM_MOTOR_C1_IDX                                DL_TIMER_CC_1_INDEX
 
+/* Defines for PWM_SERVO */
+#define PWM_SERVO_INST                                                     TIMA0
+#define PWM_SERVO_INST_IRQHandler                               TIMA0_IRQHandler
+#define PWM_SERVO_INST_INT_IRQN                                 (TIMA0_INT_IRQn)
+#define PWM_SERVO_INST_CLK_FREQ                                          1000000
+/* GPIO defines for channel 0 */
+#define GPIO_PWM_SERVO_C0_PORT                                             GPIOB
+#define GPIO_PWM_SERVO_C0_PIN                                      DL_GPIO_PIN_8
+#define GPIO_PWM_SERVO_C0_IOMUX                                  (IOMUX_PINCM25)
+#define GPIO_PWM_SERVO_C0_IOMUX_FUNC                 IOMUX_PINCM25_PF_TIMA0_CCP0
+#define GPIO_PWM_SERVO_C0_IDX                                DL_TIMER_CC_0_INDEX
+/* GPIO defines for channel 1 */
+#define GPIO_PWM_SERVO_C1_PORT                                             GPIOB
+#define GPIO_PWM_SERVO_C1_PIN                                      DL_GPIO_PIN_9
+#define GPIO_PWM_SERVO_C1_IOMUX                                  (IOMUX_PINCM26)
+#define GPIO_PWM_SERVO_C1_IOMUX_FUNC                 IOMUX_PINCM26_PF_TIMA0_CCP1
+#define GPIO_PWM_SERVO_C1_IDX                                DL_TIMER_CC_1_INDEX
+/* GPIO defines for channel 2 */
+#define GPIO_PWM_SERVO_C2_PORT                                             GPIOA
+#define GPIO_PWM_SERVO_C2_PIN                                     DL_GPIO_PIN_15
+#define GPIO_PWM_SERVO_C2_IOMUX                                  (IOMUX_PINCM37)
+#define GPIO_PWM_SERVO_C2_IOMUX_FUNC                 IOMUX_PINCM37_PF_TIMA0_CCP2
+#define GPIO_PWM_SERVO_C2_IDX                                DL_TIMER_CC_2_INDEX
+/* GPIO defines for channel 3 */
+#define GPIO_PWM_SERVO_C3_PORT                                             GPIOA
+#define GPIO_PWM_SERVO_C3_PIN                                     DL_GPIO_PIN_17
+#define GPIO_PWM_SERVO_C3_IOMUX                                  (IOMUX_PINCM39)
+#define GPIO_PWM_SERVO_C3_IOMUX_FUNC                 IOMUX_PINCM39_PF_TIMA0_CCP3
+#define GPIO_PWM_SERVO_C3_IDX                                DL_TIMER_CC_3_INDEX
+
 
 
 /* Defines for TIMER_SYS */
-#define TIMER_SYS_INST                                                   (TIMG8)
-#define TIMER_SYS_INST_IRQHandler                               TIMG8_IRQHandler
-#define TIMER_SYS_INST_INT_IRQN                                 (TIMG8_INT_IRQn)
+#define TIMER_SYS_INST                                                   (TIMG6)
+#define TIMER_SYS_INST_IRQHandler                               TIMG6_IRQHandler
+#define TIMER_SYS_INST_INT_IRQN                                 (TIMG6_INT_IRQn)
 #define TIMER_SYS_INST_LOAD_VALUE                                         (124U)
 
 
 
-/* Defines for UART_MAIN */
-#define UART_MAIN_INST                                                     UART1
-#define UART_MAIN_INST_FREQUENCY                                        32000000
-#define UART_MAIN_INST_IRQHandler                               UART1_IRQHandler
-#define UART_MAIN_INST_INT_IRQN                                   UART1_INT_IRQn
-#define GPIO_UART_MAIN_RX_PORT                                             GPIOA
-#define GPIO_UART_MAIN_TX_PORT                                             GPIOA
-#define GPIO_UART_MAIN_RX_PIN                                      DL_GPIO_PIN_9
-#define GPIO_UART_MAIN_TX_PIN                                      DL_GPIO_PIN_8
-#define GPIO_UART_MAIN_IOMUX_RX                                  (IOMUX_PINCM20)
-#define GPIO_UART_MAIN_IOMUX_TX                                  (IOMUX_PINCM19)
-#define GPIO_UART_MAIN_IOMUX_RX_FUNC                   IOMUX_PINCM20_PF_UART1_RX
-#define GPIO_UART_MAIN_IOMUX_TX_FUNC                   IOMUX_PINCM19_PF_UART1_TX
-#define UART_MAIN_BAUD_RATE                                               (9600)
-#define UART_MAIN_IBRD_32_MHZ_9600_BAUD                                    (208)
-#define UART_MAIN_FBRD_32_MHZ_9600_BAUD                                     (21)
+
+/* Defines for I2C_SHARED */
+#define I2C_SHARED_INST                                                     I2C0
+#define I2C_SHARED_INST_IRQHandler                               I2C0_IRQHandler
+#define I2C_SHARED_INST_INT_IRQN                                   I2C0_INT_IRQn
+#define I2C_SHARED_BUS_SPEED_HZ                                           400000
+#define GPIO_I2C_SHARED_SDA_PORT                                           GPIOA
+#define GPIO_I2C_SHARED_SDA_PIN                                    DL_GPIO_PIN_0
+#define GPIO_I2C_SHARED_IOMUX_SDA                                 (IOMUX_PINCM1)
+#define GPIO_I2C_SHARED_IOMUX_SDA_FUNC                  IOMUX_PINCM1_PF_I2C0_SDA
+#define GPIO_I2C_SHARED_SCL_PORT                                           GPIOA
+#define GPIO_I2C_SHARED_SCL_PIN                                    DL_GPIO_PIN_1
+#define GPIO_I2C_SHARED_IOMUX_SCL                                 (IOMUX_PINCM2)
+#define GPIO_I2C_SHARED_IOMUX_SCL_FUNC                  IOMUX_PINCM2_PF_I2C0_SCL
+
+
+/* Defines for UART_DEBUG */
+#define UART_DEBUG_INST                                                    UART0
+#define UART_DEBUG_INST_FREQUENCY                                       32000000
+#define UART_DEBUG_INST_IRQHandler                              UART0_IRQHandler
+#define UART_DEBUG_INST_INT_IRQN                                  UART0_INT_IRQn
+#define GPIO_UART_DEBUG_RX_PORT                                            GPIOA
+#define GPIO_UART_DEBUG_TX_PORT                                            GPIOA
+#define GPIO_UART_DEBUG_RX_PIN                                    DL_GPIO_PIN_11
+#define GPIO_UART_DEBUG_TX_PIN                                    DL_GPIO_PIN_10
+#define GPIO_UART_DEBUG_IOMUX_RX                                 (IOMUX_PINCM22)
+#define GPIO_UART_DEBUG_IOMUX_TX                                 (IOMUX_PINCM21)
+#define GPIO_UART_DEBUG_IOMUX_RX_FUNC                  IOMUX_PINCM22_PF_UART0_RX
+#define GPIO_UART_DEBUG_IOMUX_TX_FUNC                  IOMUX_PINCM21_PF_UART0_TX
+#define UART_DEBUG_BAUD_RATE                                            (115200)
+#define UART_DEBUG_IBRD_32_MHZ_115200_BAUD                                  (17)
+#define UART_DEBUG_FBRD_32_MHZ_115200_BAUD                                  (23)
 
 
 
 
 
-/* Port definition for Pin Group GPIO_MOTOR */
-#define GPIO_MOTOR_PORT                                                  (GPIOB)
-
-/* Defines for AIN1: GPIOB.6 with pinCMx 23 on package pin 58 */
-#define GPIO_MOTOR_AIN1_PIN                                      (DL_GPIO_PIN_6)
-#define GPIO_MOTOR_AIN1_IOMUX                                    (IOMUX_PINCM23)
-/* Defines for AIN2: GPIOB.7 with pinCMx 24 on package pin 59 */
-#define GPIO_MOTOR_AIN2_PIN                                      (DL_GPIO_PIN_7)
-#define GPIO_MOTOR_AIN2_IOMUX                                    (IOMUX_PINCM24)
-/* Defines for BIN1: GPIOB.8 with pinCMx 25 on package pin 60 */
-#define GPIO_MOTOR_BIN1_PIN                                      (DL_GPIO_PIN_8)
-#define GPIO_MOTOR_BIN1_IOMUX                                    (IOMUX_PINCM25)
-/* Defines for BIN2: GPIOB.9 with pinCMx 26 on package pin 61 */
-#define GPIO_MOTOR_BIN2_PIN                                      (DL_GPIO_PIN_9)
-#define GPIO_MOTOR_BIN2_IOMUX                                    (IOMUX_PINCM26)
-/* Defines for STBY: GPIOB.23 with pinCMx 51 on package pin 22 */
-#define GPIO_MOTOR_STBY_PIN                                     (DL_GPIO_PIN_23)
-#define GPIO_MOTOR_STBY_IOMUX                                    (IOMUX_PINCM51)
-/* Port definition for Pin Group GPIO_ENCODER */
-#define GPIO_ENCODER_PORT                                                (GPIOB)
-
-/* Defines for E1A: GPIOB.10 with pinCMx 27 on package pin 62 */
-// pins affected by this interrupt request:["E1A","E2A"]
-#define GPIO_ENCODER_INT_IRQN                                   (GPIOB_INT_IRQn)
-#define GPIO_ENCODER_INT_IIDX                   (DL_INTERRUPT_GROUP1_IIDX_GPIOB)
-#define GPIO_ENCODER_E1A_IIDX                               (DL_GPIO_IIDX_DIO10)
-#define GPIO_ENCODER_E1A_PIN                                    (DL_GPIO_PIN_10)
-#define GPIO_ENCODER_E1A_IOMUX                                   (IOMUX_PINCM27)
-/* Defines for E1B: GPIOB.11 with pinCMx 28 on package pin 63 */
-#define GPIO_ENCODER_E1B_PIN                                    (DL_GPIO_PIN_11)
-#define GPIO_ENCODER_E1B_IOMUX                                   (IOMUX_PINCM28)
-/* Defines for E2A: GPIOB.0 with pinCMx 12 on package pin 47 */
-#define GPIO_ENCODER_E2A_IIDX                                (DL_GPIO_IIDX_DIO0)
-#define GPIO_ENCODER_E2A_PIN                                     (DL_GPIO_PIN_0)
-#define GPIO_ENCODER_E2A_IOMUX                                   (IOMUX_PINCM12)
-/* Defines for E2B: GPIOB.1 with pinCMx 13 on package pin 48 */
-#define GPIO_ENCODER_E2B_PIN                                     (DL_GPIO_PIN_1)
-#define GPIO_ENCODER_E2B_IOMUX                                   (IOMUX_PINCM13)
+/* Defines for L_IN1: GPIOB.17 with pinCMx 43 on package pin 14 */
+#define GPIO_MOTOR_L_IN1_PORT                                            (GPIOB)
+#define GPIO_MOTOR_L_IN1_PIN                                    (DL_GPIO_PIN_17)
+#define GPIO_MOTOR_L_IN1_IOMUX                                   (IOMUX_PINCM43)
+/* Defines for L_IN2: GPIOB.19 with pinCMx 45 on package pin 16 */
+#define GPIO_MOTOR_L_IN2_PORT                                            (GPIOB)
+#define GPIO_MOTOR_L_IN2_PIN                                    (DL_GPIO_PIN_19)
+#define GPIO_MOTOR_L_IN2_IOMUX                                   (IOMUX_PINCM45)
+/* Defines for R_IN1: GPIOA.16 with pinCMx 38 on package pin 9 */
+#define GPIO_MOTOR_R_IN1_PORT                                            (GPIOA)
+#define GPIO_MOTOR_R_IN1_PIN                                    (DL_GPIO_PIN_16)
+#define GPIO_MOTOR_R_IN1_IOMUX                                   (IOMUX_PINCM38)
+/* Defines for R_IN2: GPIOB.24 with pinCMx 52 on package pin 23 */
+#define GPIO_MOTOR_R_IN2_PORT                                            (GPIOB)
+#define GPIO_MOTOR_R_IN2_PIN                                    (DL_GPIO_PIN_24)
+#define GPIO_MOTOR_R_IN2_IOMUX                                   (IOMUX_PINCM52)
+/* Defines for L_A: GPIOB.6 with pinCMx 23 on package pin 58 */
+#define GPIO_ENCODER_L_A_PORT                                            (GPIOB)
+// pins affected by this interrupt request:["L_A"]
+#define GPIO_ENCODER_GPIOB_INT_IRQN                             (GPIOB_INT_IRQn)
+#define GPIO_ENCODER_GPIOB_INT_IIDX             (DL_INTERRUPT_GROUP1_IIDX_GPIOB)
+#define GPIO_ENCODER_L_A_IIDX                                (DL_GPIO_IIDX_DIO6)
+#define GPIO_ENCODER_L_A_PIN                                     (DL_GPIO_PIN_6)
+#define GPIO_ENCODER_L_A_IOMUX                                   (IOMUX_PINCM23)
+/* Defines for L_B: GPIOB.7 with pinCMx 24 on package pin 59 */
+#define GPIO_ENCODER_L_B_PORT                                            (GPIOB)
+#define GPIO_ENCODER_L_B_PIN                                     (DL_GPIO_PIN_7)
+#define GPIO_ENCODER_L_B_IOMUX                                   (IOMUX_PINCM24)
+/* Defines for R_A: GPIOA.14 with pinCMx 36 on package pin 7 */
+#define GPIO_ENCODER_R_A_PORT                                            (GPIOA)
+// pins affected by this interrupt request:["R_A"]
+#define GPIO_ENCODER_GPIOA_INT_IRQN                             (GPIOA_INT_IRQn)
+#define GPIO_ENCODER_GPIOA_INT_IIDX             (DL_INTERRUPT_GROUP1_IIDX_GPIOA)
+#define GPIO_ENCODER_R_A_IIDX                               (DL_GPIO_IIDX_DIO14)
+#define GPIO_ENCODER_R_A_PIN                                    (DL_GPIO_PIN_14)
+#define GPIO_ENCODER_R_A_IOMUX                                   (IOMUX_PINCM36)
+/* Defines for R_B: GPIOA.31 with pinCMx 6 on package pin 39 */
+#define GPIO_ENCODER_R_B_PORT                                            (GPIOA)
+#define GPIO_ENCODER_R_B_PIN                                    (DL_GPIO_PIN_31)
+#define GPIO_ENCODER_R_B_IOMUX                                    (IOMUX_PINCM6)
 /* Port definition for Pin Group GPIO_GRAYSCALE */
-#define GPIO_GRAYSCALE_PORT                                              (GPIOA)
+#define GPIO_GRAYSCALE_PORT                                              (GPIOB)
 
-/* Defines for OUT: GPIOA.14 with pinCMx 36 on package pin 7 */
-#define GPIO_GRAYSCALE_OUT_PIN                                  (DL_GPIO_PIN_14)
-#define GPIO_GRAYSCALE_OUT_IOMUX                                 (IOMUX_PINCM36)
-/* Defines for AD0: GPIOA.15 with pinCMx 37 on package pin 8 */
-#define GPIO_GRAYSCALE_AD0_PIN                                  (DL_GPIO_PIN_15)
-#define GPIO_GRAYSCALE_AD0_IOMUX                                 (IOMUX_PINCM37)
-/* Defines for AD1: GPIOA.16 with pinCMx 38 on package pin 9 */
-#define GPIO_GRAYSCALE_AD1_PIN                                  (DL_GPIO_PIN_16)
-#define GPIO_GRAYSCALE_AD1_IOMUX                                 (IOMUX_PINCM38)
-/* Defines for AD2: GPIOA.17 with pinCMx 39 on package pin 10 */
-#define GPIO_GRAYSCALE_AD2_PIN                                  (DL_GPIO_PIN_17)
-#define GPIO_GRAYSCALE_AD2_IOMUX                                 (IOMUX_PINCM39)
+/* Defines for AD2: GPIOB.1 with pinCMx 13 on package pin 48 */
+#define GPIO_GRAYSCALE_AD2_PIN                                   (DL_GPIO_PIN_1)
+#define GPIO_GRAYSCALE_AD2_IOMUX                                 (IOMUX_PINCM13)
+/* Defines for AD1: GPIOB.10 with pinCMx 27 on package pin 62 */
+#define GPIO_GRAYSCALE_AD1_PIN                                  (DL_GPIO_PIN_10)
+#define GPIO_GRAYSCALE_AD1_IOMUX                                 (IOMUX_PINCM27)
+/* Defines for AD0: GPIOB.13 with pinCMx 30 on package pin 1 */
+#define GPIO_GRAYSCALE_AD0_PIN                                  (DL_GPIO_PIN_13)
+#define GPIO_GRAYSCALE_AD0_IOMUX                                 (IOMUX_PINCM30)
+/* Defines for OUT: GPIOB.23 with pinCMx 51 on package pin 22 */
+#define GPIO_GRAYSCALE_OUT_PIN                                  (DL_GPIO_PIN_23)
+#define GPIO_GRAYSCALE_OUT_IOMUX                                 (IOMUX_PINCM51)
 /* Port definition for Pin Group GPIO_KEYS */
 #define GPIO_KEYS_PORT                                                   (GPIOB)
 
-/* Defines for K1: GPIOB.15 with pinCMx 32 on package pin 3 */
-#define GPIO_KEYS_K1_PIN                                        (DL_GPIO_PIN_15)
-#define GPIO_KEYS_K1_IOMUX                                       (IOMUX_PINCM32)
-/* Defines for K2: GPIOB.16 with pinCMx 33 on package pin 4 */
-#define GPIO_KEYS_K2_PIN                                        (DL_GPIO_PIN_16)
-#define GPIO_KEYS_K2_IOMUX                                       (IOMUX_PINCM33)
-/* Defines for K3: GPIOB.2 with pinCMx 15 on package pin 50 */
-#define GPIO_KEYS_K3_PIN                                         (DL_GPIO_PIN_2)
-#define GPIO_KEYS_K3_IOMUX                                       (IOMUX_PINCM15)
-/* Defines for K4: GPIOB.3 with pinCMx 16 on package pin 51 */
-#define GPIO_KEYS_K4_PIN                                         (DL_GPIO_PIN_3)
-#define GPIO_KEYS_K4_IOMUX                                       (IOMUX_PINCM16)
+/* Defines for KEY1: GPIOB.14 with pinCMx 31 on package pin 2 */
+#define GPIO_KEYS_KEY1_PIN                                      (DL_GPIO_PIN_14)
+#define GPIO_KEYS_KEY1_IOMUX                                     (IOMUX_PINCM31)
+/* Defines for KEY2: GPIOB.11 with pinCMx 28 on package pin 63 */
+#define GPIO_KEYS_KEY2_PIN                                      (DL_GPIO_PIN_11)
+#define GPIO_KEYS_KEY2_IOMUX                                     (IOMUX_PINCM28)
+/* Defines for KEY3: GPIOB.27 with pinCMx 58 on package pin 29 */
+#define GPIO_KEYS_KEY3_PIN                                      (DL_GPIO_PIN_27)
+#define GPIO_KEYS_KEY3_IOMUX                                     (IOMUX_PINCM58)
+/* Defines for KEY4: GPIOB.26 with pinCMx 57 on package pin 28 */
+#define GPIO_KEYS_KEY4_PIN                                      (DL_GPIO_PIN_26)
+#define GPIO_KEYS_KEY4_IOMUX                                     (IOMUX_PINCM57)
+/* Defines for LED_USER: GPIOB.4 with pinCMx 17 on package pin 52 */
+#define GPIO_BOARD_IO_LED_USER_PORT                                      (GPIOB)
+#define GPIO_BOARD_IO_LED_USER_PIN                               (DL_GPIO_PIN_4)
+#define GPIO_BOARD_IO_LED_USER_IOMUX                             (IOMUX_PINCM17)
+/* Defines for BEEP: GPIOA.7 with pinCMx 14 on package pin 49 */
+#define GPIO_BOARD_IO_BEEP_PORT                                          (GPIOA)
+#define GPIO_BOARD_IO_BEEP_PIN                                   (DL_GPIO_PIN_7)
+#define GPIO_BOARD_IO_BEEP_IOMUX                                 (IOMUX_PINCM14)
 
 /* clang-format on */
 
@@ -203,8 +259,10 @@ void SYSCFG_DL_initPower(void);
 void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_MOTOR_init(void);
+void SYSCFG_DL_PWM_SERVO_init(void);
 void SYSCFG_DL_TIMER_SYS_init(void);
-void SYSCFG_DL_UART_MAIN_init(void);
+void SYSCFG_DL_I2C_SHARED_init(void);
+void SYSCFG_DL_UART_DEBUG_init(void);
 
 
 bool SYSCFG_DL_saveConfiguration(void);
