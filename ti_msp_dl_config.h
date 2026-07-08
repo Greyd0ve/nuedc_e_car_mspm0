@@ -108,10 +108,10 @@ extern "C" {
 #define GPIO_PWM_SERVO_C0_IOMUX_FUNC                 IOMUX_PINCM25_PF_TIMA0_CCP0
 #define GPIO_PWM_SERVO_C0_IDX                                DL_TIMER_CC_0_INDEX
 /* GPIO defines for channel 1 */
-#define GPIO_PWM_SERVO_C1_PORT                                             GPIOB
-#define GPIO_PWM_SERVO_C1_PIN                                      DL_GPIO_PIN_9
-#define GPIO_PWM_SERVO_C1_IOMUX                                  (IOMUX_PINCM26)
-#define GPIO_PWM_SERVO_C1_IOMUX_FUNC                 IOMUX_PINCM26_PF_TIMA0_CCP1
+#define GPIO_PWM_SERVO_C1_PORT                                             GPIOA
+#define GPIO_PWM_SERVO_C1_PIN                                     DL_GPIO_PIN_22
+#define GPIO_PWM_SERVO_C1_IOMUX                                  (IOMUX_PINCM47)
+#define GPIO_PWM_SERVO_C1_IOMUX_FUNC                 IOMUX_PINCM47_PF_TIMA0_CCP1
 #define GPIO_PWM_SERVO_C1_IDX                                DL_TIMER_CC_1_INDEX
 /* GPIO defines for channel 2 */
 #define GPIO_PWM_SERVO_C2_PORT                                             GPIOA

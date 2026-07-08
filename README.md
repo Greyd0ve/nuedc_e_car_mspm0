@@ -51,7 +51,7 @@ STBY 当前直接接 5V，软件不能依赖 STBY 关断电机，只能通过 PW
 | `GRAY_AD0` | B13 | 多路选择地址位 |
 | `GRAY_OUT` | B23 | 灰度输出输入 |
 
-灰度模块当前按 5V 供电记录。`GRAY_OUT` 进入 MSPM0 B23 前，硬件必须已经通过分压或电平转换降到 3.3V 安全范围。软件无法把 5V GPIO 输入变安全，不能用代码掩盖硬件风险。`GRAY_AD0/AD1/AD2` 是 MSPM0 普通 3.3V 输出，如果 5V 模块不能可靠识别 3.3V 高电平，需要硬件增加电平转换。
+灰度模块当前按 5V 供电记录。`GRAY_OUT` 进入 MSPM0 B23 前，硬件必须已经通过分压或电平转换降到 3.3V 安全范围。软件无法把 5V GPIO 输入变安全，不能用代码掩盖硬件风险。`GRAY_OUT` 配置为无内部上下拉输入，由模块输出电平决定。`GRAY_AD0/AD1/AD2` 是 MSPM0 普通 3.3V 输出，如果 5V 模块不能可靠识别 3.3V 高电平，需要硬件增加电平转换。
 
 ### I2C、蜂鸣器、LED、按键、舵机、UART
 
@@ -64,10 +64,12 @@ STBY 当前直接接 5V，软件不能依赖 STBY 关断电机，只能通过 PW
 | KEY2/SW2 | B11，输入上拉，按下为 0 |
 | KEY3/SW3 | B27，输入上拉，按下为 0 |
 | KEY4/SW4 | B26，输入上拉，按下为 0 |
-| SERVO1_PWM | TIMA0-C0，当前代码映射 PB8 |
-| SERVO2_PWM | TIMA0-C1，当前代码映射 PB9 |
+| SERVO1_PWM | TIMA0-C0，当前可生成映射 PB8；PA20 在当前芯片包中不是 TIMA0-C0 |
+| SERVO2_PWM | TIMA0-C1，当前代码映射 PA22 |
 | SERVO3_PWM | TIMA0-C2，当前代码映射 PA15 |
 | SERVO4_PWM | TIMA0-C3，当前代码映射 PA17 |
+
+注意：当前 MSPM0G3507 LQFP-64(PM) SysConfig 数据中，PA20 只有 GPIOA_DIO20/SWCLK 功能，不能生成 TIMA0-C0；如天猛星 IO 图标注为 PA20，需要先确认该标注是否为板卡接口编号而非 MCU 的 PA20。
 | UART0 | USB 调试 / printf / board test 日志，当前 115200 |
 | UART1 | 预留 K230 / 瞄准模块 |
 | UART2/UART3 | 备用 |

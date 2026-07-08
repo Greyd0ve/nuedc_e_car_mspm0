@@ -221,8 +221,12 @@
 
 /* ---------------- Servo PWM ----------------
  * TIMA0 C0..C3, 50Hz, 20ms period, default output disabled unless test macro
- * enables a center pulse.  Use an independent high-current servo supply and
- * common ground with the MSPM0 board.
+ * enables a center pulse.
+ * Current SysConfig-valid routing: TIMA0-C0 -> PB8, TIMA0-C1 -> PA22,
+ * TIMA0-C2 -> PA15, TIMA0-C3 -> PA17.  PA20 is GPIO/SWCLK only for the
+ * current MSPM0G3507 LQFP-64 pinmux and cannot be generated as TIMA0-C0.
+ * Use an independent high-current servo supply and common ground with the
+ * MSPM0 board.
  */
 #define SERVO_PWM_TIMER_INST            PWM_SERVO_INST
 #define SERVO_PWM_PERIOD_US             20000U

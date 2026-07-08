@@ -119,7 +119,7 @@ GPIO3.associatedPins[3].assignedPort     = "PORTB";
 GPIO3.associatedPins[3].assignedPin      = "23";
 GPIO3.associatedPins[3].pin.$assign      = "PB23";
 GPIO3.associatedPins[3].direction        = "INPUT";
-GPIO3.associatedPins[3].internalResistor = "PULL_UP";
+GPIO3.associatedPins[3].internalResistor = "NONE";
 
 GPIO4.$name = "GPIO_KEYS";
 GPIO4.associatedPins.create(4);
@@ -181,7 +181,7 @@ PWM2.clockPrescale              = 32;
 PWM2.timerCount                 = 20000;
 PWM2.peripheral.$assign         = "TIMA0";
 PWM2.peripheral.ccp0Pin.$assign = "PB8";
-PWM2.peripheral.ccp1Pin.$assign = "PB9";
+PWM2.peripheral.ccp1Pin.$assign = "PA22";
 PWM2.peripheral.ccp2Pin.$assign = "PA15";
 PWM2.peripheral.ccp3Pin.$assign = "PA17";
 PWM2.PWM_CHANNEL_0.$name        = "SERVO_C0";
