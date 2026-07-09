@@ -103,7 +103,7 @@
 /* ---------------- Encoders ----------------
  * First version uses A-phase GPIO interrupt and B-phase level sampling.
  * ENC_L_A -> PA26, ENC_L_B -> PA27
- * ENC_R_A -> PA14, ENC_R_B -> PA25
+ * ENC_R_A -> PA25, ENC_R_B -> PA14
  * A phases are on GPIOA, so GROUP1 GPIOA dispatch handles both counters.
  */
 #define ENC_L_A_PORT                    GPIO_ENCODER_L_A_PORT

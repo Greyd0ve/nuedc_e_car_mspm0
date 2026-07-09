@@ -202,13 +202,13 @@ extern "C" {
 /* Defines for L_B: GPIOA.27 with pinCMx 60 on package pin 31 */
 #define GPIO_ENCODER_L_B_PIN                                    (DL_GPIO_PIN_27)
 #define GPIO_ENCODER_L_B_IOMUX                                   (IOMUX_PINCM60)
-/* Defines for R_A: GPIOA.14 with pinCMx 36 on package pin 7 */
-#define GPIO_ENCODER_R_A_IIDX                               (DL_GPIO_IIDX_DIO14)
-#define GPIO_ENCODER_R_A_PIN                                    (DL_GPIO_PIN_14)
-#define GPIO_ENCODER_R_A_IOMUX                                   (IOMUX_PINCM36)
-/* Defines for R_B: GPIOA.25 with pinCMx 55 on package pin 26 */
-#define GPIO_ENCODER_R_B_PIN                                    (DL_GPIO_PIN_25)
-#define GPIO_ENCODER_R_B_IOMUX                                   (IOMUX_PINCM55)
+/* Defines for R_A: GPIOA.25 with pinCMx 55 on package pin 26 */
+#define GPIO_ENCODER_R_A_IIDX                               (DL_GPIO_IIDX_DIO25)
+#define GPIO_ENCODER_R_A_PIN                                    (DL_GPIO_PIN_25)
+#define GPIO_ENCODER_R_A_IOMUX                                   (IOMUX_PINCM55)
+/* Defines for R_B: GPIOA.14 with pinCMx 36 on package pin 7 */
+#define GPIO_ENCODER_R_B_PIN                                    (DL_GPIO_PIN_14)
+#define GPIO_ENCODER_R_B_IOMUX                                   (IOMUX_PINCM36)
 /* Port definition for Pin Group GPIO_GRAYSCALE */
 #define GPIO_GRAYSCALE_PORT                                              (GPIOB)
 

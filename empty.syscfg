@@ -59,7 +59,7 @@ GPIO1.associatedPins[3].initialValue = "CLEARED";
 /*
  * Encoder first pass:
  * M1 = left, M2 = right.  A phase is interrupt input, B phase is sampled.
- * ENC_L_A/ENC_L_B = PA26/PA27, ENC_R_A/ENC_R_B = PA14/PA25.
+ * ENC_L_A/ENC_L_B = PA26/PA27, ENC_R_A/ENC_R_B = PA25/PA14.
  */
 GPIO2.$name = "GPIO_ENCODER";
 GPIO2.associatedPins.create(4);
@@ -79,16 +79,16 @@ GPIO2.associatedPins[1].direction        = "INPUT";
 GPIO2.associatedPins[1].internalResistor = "PULL_UP";
 GPIO2.associatedPins[2].$name            = "R_A";
 GPIO2.associatedPins[2].assignedPort     = "PORTA";
-GPIO2.associatedPins[2].assignedPin      = "14";
-GPIO2.associatedPins[2].pin.$assign      = "PA14";
+GPIO2.associatedPins[2].assignedPin      = "25";
+GPIO2.associatedPins[2].pin.$assign      = "PA25";
 GPIO2.associatedPins[2].direction        = "INPUT";
 GPIO2.associatedPins[2].internalResistor = "PULL_UP";
 GPIO2.associatedPins[2].interruptEn      = true;
 GPIO2.associatedPins[2].polarity         = "RISE_FALL";
 GPIO2.associatedPins[3].$name            = "R_B";
 GPIO2.associatedPins[3].assignedPort     = "PORTA";
-GPIO2.associatedPins[3].assignedPin      = "25";
-GPIO2.associatedPins[3].pin.$assign      = "PA25";
+GPIO2.associatedPins[3].assignedPin      = "14";
+GPIO2.associatedPins[3].pin.$assign      = "PA14";
 GPIO2.associatedPins[3].direction        = "INPUT";
 GPIO2.associatedPins[3].internalResistor = "PULL_UP";
 
