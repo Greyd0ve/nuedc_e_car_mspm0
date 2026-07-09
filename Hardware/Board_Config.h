@@ -136,11 +136,11 @@
 
 /* ---------------- 8-channel grayscale module ----------------
  * P3-1 VCC = 5V, P3-6 GND.
- * GRAY_AD2 -> B01, GRAY_AD1 -> B10, GRAY_AD0 -> B13, GRAY_OUT -> B23.
+ * GRAY_AD2 -> PB23, GRAY_AD1 -> PB10, GRAY_AD0 -> PB13, GRAY_OUT -> PB01.
  *
  * Hardware warning:
  * The grayscale board is powered from 5V.  GRAY_OUT must be divided or level
- * shifted to <= 3.3V before it reaches MSPM0 B23.  Software cannot make a
+ * shifted to <= 3.3V before it reaches MSPM0 PB01.  Software cannot make a
  * direct 5V GPIO input safe.  AD0/AD1/AD2 are normal 3.3V MSPM0 outputs; if
  * the 5V module does not recognize 3.3V high reliably, fix it in hardware.
  */

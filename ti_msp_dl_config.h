@@ -212,18 +212,18 @@ extern "C" {
 /* Port definition for Pin Group GPIO_GRAYSCALE */
 #define GPIO_GRAYSCALE_PORT                                              (GPIOB)
 
-/* Defines for AD2: GPIOB.1 with pinCMx 13 on package pin 48 */
-#define GPIO_GRAYSCALE_AD2_PIN                                   (DL_GPIO_PIN_1)
-#define GPIO_GRAYSCALE_AD2_IOMUX                                 (IOMUX_PINCM13)
+/* Defines for AD2: GPIOB.23 with pinCMx 51 on package pin 22 */
+#define GPIO_GRAYSCALE_AD2_PIN                                  (DL_GPIO_PIN_23)
+#define GPIO_GRAYSCALE_AD2_IOMUX                                 (IOMUX_PINCM51)
 /* Defines for AD1: GPIOB.10 with pinCMx 27 on package pin 62 */
 #define GPIO_GRAYSCALE_AD1_PIN                                  (DL_GPIO_PIN_10)
 #define GPIO_GRAYSCALE_AD1_IOMUX                                 (IOMUX_PINCM27)
 /* Defines for AD0: GPIOB.13 with pinCMx 30 on package pin 1 */
 #define GPIO_GRAYSCALE_AD0_PIN                                  (DL_GPIO_PIN_13)
 #define GPIO_GRAYSCALE_AD0_IOMUX                                 (IOMUX_PINCM30)
-/* Defines for OUT: GPIOB.23 with pinCMx 51 on package pin 22 */
-#define GPIO_GRAYSCALE_OUT_PIN                                  (DL_GPIO_PIN_23)
-#define GPIO_GRAYSCALE_OUT_IOMUX                                 (IOMUX_PINCM51)
+/* Defines for OUT: GPIOB.1 with pinCMx 13 on package pin 48 */
+#define GPIO_GRAYSCALE_OUT_PIN                                   (DL_GPIO_PIN_1)
+#define GPIO_GRAYSCALE_OUT_IOMUX                                 (IOMUX_PINCM13)
 /* Port definition for Pin Group GPIO_KEYS */
 #define GPIO_KEYS_PORT                                                   (GPIOB)
 
