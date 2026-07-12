@@ -110,7 +110,7 @@ Keil 工程注意事项：
 SysConfig 文件为 empty.syscfg。
 ti_msp_dl_config.c / ti_msp_dl_config.h 是 SysConfig 生成文件，不写业务逻辑。
 新增 .c 文件后必须加入 Keil 工程，否则 Keil 不会编译。
-UART0 保留为调试串口。
+UART_DEBUG 保持逻辑名不变，当前实际映射到 UART1 的 TX1/RX1 接口。
 修改 IO 时必须同步检查原理图、SysConfig、代码宏定义、PCB 丝印和实际接线。
 上电默认电机不应自动启动，PWM 默认应为 0。
 ```
@@ -125,15 +125,15 @@ UART0 保留为调试串口。
 姿态模块：MPU6050，I2C 接口
 交互输入：4 个按键
 状态输出：蜂鸣器、自用 LED
-通信接口：UART0 调试，UART1 预留给 K230 / 瞄准模块
+通信接口：UART_DEBUG 测试/调参串口，当前使用 UART1 TX1/RX1；其他 UART 预留给 K230 / 瞄准模块等后续扩展
 供电：12V 锂电池输入，降压得到 5V 和 3.3V
 ```
 
 关键外设分配：
 
 ```text
-UART0：建议用于 printf、日志输出、调试
-UART1：建议用于和 K230 / 瞄准模块通信
+UART_DEBUG：UART1，TX1/PB6 -> UART1_TX，RX1/PB7 -> UART1_RX，9600，8N1
+UART2/UART3：预留给 K230 / 瞄准模块或备用通信
 H8 IIC OLED：SCL/SKC PB9 / SDA PB8，当前默认启用
 I2C0：PA1 SCL / PA0 SDA，保留给 MPU6050 或备用 IIC 模块
 H8 SPI OLED：SCL PB9 / SDA PB8 / RES PB10 / DC PB11 / CS PB14，当前默认关闭
@@ -181,7 +181,7 @@ TIMG8 / TIMG12：编码器输入
 H8 IIC OLED：PB9 / PB8，4 针 OLED 默认接法
 I2C0：PA1 / PA0，MPU6050 或备用 IIC
 H8 SPI OLED：PB9 / PB8 / PB10 / PB11 / PB14，当前默认关闭
-UART0~UART3：调试和通信
+UART_DEBUG：UART1 PB6/PB7，测试/调参；UART2/UART3 备用通信
 PB23 / PB10 / PB13 / PB01：灰度模块
 B14 / B11 / B27 / B26：按键
 A07：蜂鸣器
@@ -227,18 +227,28 @@ H8-7 CS  -> PB14
 
 当前旧 IO 中 PB10 同时是 `GRAY_AD1`，PB11/PB14 同时是 `KEY2/KEY1`。启用 H8 SPI OLED 时，灰度 AD1 和 KEY1/KEY2 必须重新分配或暂时停用，否则 OLED、灰度和按键会互相抢 IO。
 
-### UART0 保留调试
+### UART_DEBUG 测试/调参串口
 
-合理分配：
+当前测试/调参串口：
 
 ```text
-UART0：电脑串口调试 / printf / 日志
-UART1：K230 / 瞄准模块通信
-UART2：蓝牙调参 / 备用
-UART3：备用
+UART_DEBUG = UART1
+TX1 / PB6 -> UART1_TX
+RX1 / PB7 -> UART1_RX
+baudrate = 9600
+8N1，无校验，无流控
 ```
 
-不建议把 UART0 长期让给 K230，因为会失去最方便的调试输出通道。
+HC-04 接线：
+
+```text
+HC-04 RX -> TX1 / PB6
+HC-04 TX -> RX1 / PB7
+HC-04 GND -> MSPM0 GND
+HC-04 VCC -> 按模块要求供电
+```
+
+业务代码继续使用 `UART_DEBUG` / `SERIAL_UART` 相关宏，不写死 UART1。
 
 ### 5V 外设信号风险
 

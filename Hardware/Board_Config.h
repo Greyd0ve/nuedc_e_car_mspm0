@@ -282,8 +282,9 @@
 #define SERVO4_PWM                      SERVO4_PWM_CC_INDEX
 
 /* ---------------- UARTs ----------------
- * UART0 is the default USB/debug printf port.
- * UART1 is reserved for K230/aim link. UART2 and UART3 are reserved.
+ * UART_DEBUG uses the schematic TX1/RX1 connector:
+ * UART1_TX -> PB6/TX1, UART1_RX -> PB7/RX1, 9600 8N1.
+ * UART2 and UART3 are reserved.
  * Do not connect two active TX devices to the same UART RX. External modules
  * must share ground with the controller.
  */

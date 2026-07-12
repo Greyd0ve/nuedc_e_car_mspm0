@@ -172,18 +172,24 @@ void BoardTest_Task10ms(void)
 
 void BoardTest_Task100ms(void)
 {
-    s_ledBlinkMs = (uint16_t)(s_ledBlinkMs + 100U);
-    if (s_ledBlinkMs >= 500U)
-    {
-        s_ledBlinkMs = 0U;
-        LED_User_Toggle();
-    }
+    /* Keep PB04 / LED_USER low by default. */
+    LED_User_Off();
 }
 
 void BoardTest_Task200ms(void)
 {
+    static uint8_t div = 0U;
+
+    div++;
+    if (div < 5U)
+    {
+        return;
+    }
+    div = 0U;
+
     BoardTest_PrintKey();
     BoardTest_PrintGray();
     BoardTest_PrintEncoder();
-    BoardTest_PrintOptionalStatus();
+
+  
 }
