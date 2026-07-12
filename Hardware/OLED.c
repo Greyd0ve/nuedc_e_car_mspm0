@@ -2,7 +2,8 @@
 #include "Board_Config.h"
 #include <string.h>
 
-#define OLED_I2C_ADDRESS              (0x3CU)
+#define OLED_I2C_ADDRESS_PRIMARY      (0x3CU)
+#define OLED_I2C_ADDRESS_FALLBACK     (0x3DU)
 #define OLED_WIDTH                    (128U)
 #define OLED_HEIGHT                   (64U)
 #define OLED_PAGE_COUNT               (8U)
@@ -12,12 +13,16 @@
 #define OLED_CONTROL_COMMAND          (0x00U)
 #define OLED_CONTROL_DATA             (0x40U)
 #define OLED_SPI_DELAY_CYCLES         (4U)
+#define OLED_H8_I2C_DELAY_CYCLES      (120U)
 
 static uint8_t s_oledBuffer[OLED_WIDTH * OLED_PAGE_COUNT];
 static uint8_t s_oledReady = 0U;
 
 #if !BOARD_OLED_USE_H8_SPI
+static uint8_t s_oledI2CAddress = OLED_I2C_ADDRESS_PRIMARY;
+#if !BOARD_OLED_USE_H8_I2C
 static uint32_t s_i2cErrataDelayCycles = 3U;
+#endif
 #endif
 
 static const uint8_t s_font5x7[95][5] = {
@@ -134,6 +139,131 @@ static uint8_t OLED_WriteCommands(const uint8_t *cmds, uint16_t len)
 {
     return OLED_WriteControlBytes(OLED_CONTROL_COMMAND, cmds, len);
 }
+#elif BOARD_OLED_USE_H8_I2C
+static void OLED_H8_I2CReleaseSCL(void)
+{
+    DL_GPIO_disableOutput(OLED_H8_PORT, OLED_H8_SCL_PIN);
+}
+
+static void OLED_H8_I2CReleaseSDA(void)
+{
+    DL_GPIO_disableOutput(OLED_H8_PORT, OLED_H8_SDA_PIN);
+}
+
+static void OLED_H8_I2CLowSCL(void)
+{
+    DL_GPIO_clearPins(OLED_H8_PORT, OLED_H8_SCL_PIN);
+    DL_GPIO_enableOutput(OLED_H8_PORT, OLED_H8_SCL_PIN);
+}
+
+static void OLED_H8_I2CLowSDA(void)
+{
+    DL_GPIO_clearPins(OLED_H8_PORT, OLED_H8_SDA_PIN);
+    DL_GPIO_enableOutput(OLED_H8_PORT, OLED_H8_SDA_PIN);
+}
+
+static uint8_t OLED_H8_I2CReadSDA(void)
+{
+    return (uint8_t)((DL_GPIO_readPins(OLED_H8_PORT, OLED_H8_SDA_PIN) != 0U) ? 1U : 0U);
+}
+
+static void OLED_H8_I2CDelay(void)
+{
+    delay_cycles(OLED_H8_I2C_DELAY_CYCLES);
+}
+
+static void OLED_H8_I2CInit(void)
+{
+    DL_GPIO_initDigitalInputFeatures(OLED_H8_SCL_IOMUX,
+        DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
+        DL_GPIO_HYSTERESIS_ENABLE, DL_GPIO_WAKEUP_DISABLE);
+    DL_GPIO_initDigitalInputFeatures(OLED_H8_SDA_IOMUX,
+        DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
+        DL_GPIO_HYSTERESIS_ENABLE, DL_GPIO_WAKEUP_DISABLE);
+
+    DL_GPIO_clearPins(OLED_H8_PORT, OLED_H8_SCL_PIN | OLED_H8_SDA_PIN);
+    OLED_H8_I2CReleaseSCL();
+    OLED_H8_I2CReleaseSDA();
+}
+
+static void OLED_H8_I2CStart(void)
+{
+    OLED_H8_I2CReleaseSDA();
+    OLED_H8_I2CReleaseSCL();
+    OLED_H8_I2CDelay();
+    OLED_H8_I2CLowSDA();
+    OLED_H8_I2CDelay();
+    OLED_H8_I2CLowSCL();
+}
+
+static void OLED_H8_I2CStop(void)
+{
+    OLED_H8_I2CLowSDA();
+    OLED_H8_I2CDelay();
+    OLED_H8_I2CReleaseSCL();
+    OLED_H8_I2CDelay();
+    OLED_H8_I2CReleaseSDA();
+    OLED_H8_I2CDelay();
+}
+
+static uint8_t OLED_H8_I2CWriteByte(uint8_t data)
+{
+    uint8_t mask;
+    uint8_t ack;
+
+    for (mask = 0x80U; mask != 0U; mask >>= 1U)
+    {
+        if ((data & mask) != 0U)
+        {
+            OLED_H8_I2CReleaseSDA();
+        }
+        else
+        {
+            OLED_H8_I2CLowSDA();
+        }
+
+        OLED_H8_I2CDelay();
+        OLED_H8_I2CReleaseSCL();
+        OLED_H8_I2CDelay();
+        OLED_H8_I2CLowSCL();
+    }
+
+    OLED_H8_I2CReleaseSDA();
+    OLED_H8_I2CDelay();
+    OLED_H8_I2CReleaseSCL();
+    OLED_H8_I2CDelay();
+    ack = (uint8_t)(OLED_H8_I2CReadSDA() == 0U);
+    OLED_H8_I2CLowSCL();
+
+    return ack;
+}
+
+static uint8_t OLED_WriteControlBytes(uint8_t control, const uint8_t *data, uint16_t len)
+{
+    uint16_t offset;
+    uint8_t ok;
+
+    if (data == NULL && len != 0U)
+    {
+        return 0U;
+    }
+
+    OLED_H8_I2CStart();
+    ok = OLED_H8_I2CWriteByte((uint8_t)(s_oledI2CAddress << 1U));
+    ok &= OLED_H8_I2CWriteByte(control);
+    for (offset = 0U; offset < len; offset++)
+    {
+        ok &= OLED_H8_I2CWriteByte(data[offset]);
+    }
+    OLED_H8_I2CStop();
+
+    return ok;
+}
+
+static uint8_t OLED_WriteCommands(const uint8_t *cmds, uint16_t len)
+{
+    return OLED_WriteControlBytes(OLED_CONTROL_COMMAND, cmds, len);
+}
 #else
 static void OLED_CalcI2CDelay(void)
 {
@@ -216,7 +346,7 @@ static uint8_t OLED_WritePacket(const uint8_t *packet, uint8_t len)
         return 0U;
     }
 
-    DL_I2C_startControllerTransfer(OLED_I2C_INST, OLED_I2C_ADDRESS,
+    DL_I2C_startControllerTransfer(OLED_I2C_INST, s_oledI2CAddress,
         DL_I2C_CONTROLLER_DIRECTION_TX, len);
     delay_cycles(s_i2cErrataDelayCycles);
 
@@ -345,17 +475,37 @@ void OLED_Init(void)
 #if BOARD_OLED_USE_H8_SPI
     OLED_H8_GPIOInit();
     OLED_H8_Reset();
+#elif BOARD_OLED_USE_H8_I2C
+    OLED_H8_I2CInit();
 #else
     OLED_CalcI2CDelay();
 #endif
 
     memset(s_oledBuffer, 0, sizeof(s_oledBuffer));
+#if !BOARD_OLED_USE_H8_SPI
+    s_oledI2CAddress = OLED_I2C_ADDRESS_PRIMARY;
     s_oledReady = OLED_WriteCommands(initCmds, (uint16_t)sizeof(initCmds));
+    if (!s_oledReady)
+    {
+#if BOARD_OLED_USE_H8_I2C
+        OLED_H8_I2CStop();
+#else
+        DL_I2C_resetControllerTransfer(OLED_I2C_INST);
+#endif
+        s_oledI2CAddress = OLED_I2C_ADDRESS_FALLBACK;
+        s_oledReady = OLED_WriteCommands(initCmds, (uint16_t)sizeof(initCmds));
+    }
+#else
+    s_oledReady = OLED_WriteCommands(initCmds, (uint16_t)sizeof(initCmds));
+#endif
 
     OLED_Clear();
     OLED_ShowString(0, 0, "E-Car MSPM0", OLED_8X16);
 #if BOARD_OLED_USE_H8_SPI
     OLED_ShowString(0, 16, "OLED H8 SPI", OLED_8X16);
+    OLED_ShowString(0, 32, "SCL PB9 SDA PB8", OLED_8X16);
+#elif BOARD_OLED_USE_H8_I2C
+    OLED_ShowString(0, 16, "OLED H8 I2C", OLED_8X16);
     OLED_ShowString(0, 32, "SCL PB9 SDA PB8", OLED_8X16);
 #else
     OLED_ShowString(0, 16, "OLED I2C OK", OLED_8X16);

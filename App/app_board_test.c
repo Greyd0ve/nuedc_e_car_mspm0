@@ -124,8 +124,10 @@ static void BoardTest_PrintOptionalStatus(void)
 #if ECAR_TEST_OLED_ENABLE
 #if BOARD_OLED_USE_H8_SPI
     Serial_SendString("[oled] h8-spi enabled\r\n");
+#elif BOARD_OLED_USE_H8_I2C
+    Serial_SendString("[oled] h8-i2c pb9/pb8 enabled\r\n");
 #else
-    Serial_SendString("[oled] ok\r\n");
+    Serial_SendString("[oled] i2c pa1/pa0 enabled\r\n");
 #endif
 #else
     Serial_SendString("[oled] disabled\r\n");

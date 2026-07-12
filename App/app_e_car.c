@@ -749,6 +749,9 @@ void ECar_ShowStatus(void)
 #if BOARD_OLED_USE_H8_SPI
         OLED_ShowString(0, 16, "OLED H8 SPI", OLED_8X16);
         OLED_ShowString(0, 32, "SCL PB9 SDA PB8", OLED_8X16);
+#elif BOARD_OLED_USE_H8_I2C
+        OLED_ShowString(0, 16, "OLED H8 I2C", OLED_8X16);
+        OLED_ShowString(0, 32, "SCL PB9 SDA PB8", OLED_8X16);
 #else
         OLED_ShowString(0, 16, "OLED I2C OK", OLED_8X16);
         OLED_ShowString(0, 32, "SCL PA1 SDA PA0", OLED_8X16);

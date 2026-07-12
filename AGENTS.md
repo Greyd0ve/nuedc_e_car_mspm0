@@ -121,7 +121,7 @@ UART0 保留为调试串口。
 电机驱动：TB6612FNG
 驱动电机：2 个 JGA25-370B 12V 编码减速电机
 循迹模块：8 路灰度模块，CD4051 轮询结构
-显示模块：优先使用天猛星 H8 1x8 排母上的 SPI SSD1306 OLED
+显示模块：4 针 IIC SSD1306 OLED，丝印 GND / VCC / SCL(SKC) / SDA，默认插 H8 前 4 针
 姿态模块：MPU6050，I2C 接口
 交互输入：4 个按键
 状态输出：蜂鸣器、自用 LED
@@ -134,8 +134,9 @@ UART0 保留为调试串口。
 ```text
 UART0：建议用于 printf、日志输出、调试
 UART1：建议用于和 K230 / 瞄准模块通信
-H8 OLED：SCL PB9 / SDA PB8 / RES PB10 / DC PB11 / CS PB14
-I2C0：PA1 SCL / PA0 SDA，保留给 MPU6050 或外接 4-pin IIC OLED
+H8 IIC OLED：SCL/SKC PB9 / SDA PB8，当前默认启用
+I2C0：PA1 SCL / PA0 SDA，保留给 MPU6050 或备用 IIC 模块
+H8 SPI OLED：SCL PB9 / SDA PB8 / RES PB10 / DC PB11 / CS PB14，当前默认关闭
 TIMG0：左右电机 PWM
 TIMA0：预留 4 路舵机 PWM
 TIMG8 / TIMG12：编码器输入相关
@@ -177,8 +178,9 @@ Timer       系统节拍与调度
 TIMG0-C0 / TIMG0-C1：电机 PWM
 TIMA0-C0 ~ TIMA0-C3：舵机 PWM
 TIMG8 / TIMG12：编码器输入
-H8 OLED：PB9 / PB8 / PB10 / PB11 / PB14
-I2C0：PA1 / PA0，MPU6050 或备用 IIC OLED
+H8 IIC OLED：PB9 / PB8，4 针 OLED 默认接法
+I2C0：PA1 / PA0，MPU6050 或备用 IIC
+H8 SPI OLED：PB9 / PB8 / PB10 / PB11 / PB14，当前默认关闭
 UART0~UART3：调试和通信
 PB23 / PB10 / PB13 / PB01：灰度模块
 B14 / B11 / B27 / B26：按键
@@ -198,7 +200,18 @@ PCB 丝印
 
 这些位置只要有一个不一致，就可能出现“代码没问题但硬件不动”的情况。
 
-### H8 OLED IO 冲突
+### OLED 接线与 H8 OLED IO 冲突
+
+当前使用 4 针 IIC OLED，插入天猛星 H8 1x8 排母前 4 针：
+
+```text
+OLED GND -> GND
+OLED VCC -> 3V3
+OLED SCL/SKC -> PB9 / H8-3
+OLED SDA -> PB8 / H8-4
+```
+
+4 针 H8 IIC OLED 模式下 `BOARD_OLED_USE_H8_I2C = 1`、`BOARD_OLED_USE_H8_SPI = 0`，只占用 PB9/PB8，灰度 `GRAY_AD1` 和 `KEY1/KEY2` 正常可用。
 
 天猛星 H8 1x8 排母用于 SPI SSD1306 OLED 时，固定占用：
 
@@ -212,7 +225,7 @@ H8-6 DC  -> PB11
 H8-7 CS  -> PB14
 ```
 
-当前旧 IO 中 PB10 同时是 `GRAY_AD1`，PB11/PB14 同时是 `KEY2/KEY1`。启用 H8 OLED 时，灰度 AD1 和 KEY1/KEY2 必须重新分配或暂时停用，否则 OLED、灰度和按键会互相抢 IO。
+当前旧 IO 中 PB10 同时是 `GRAY_AD1`，PB11/PB14 同时是 `KEY2/KEY1`。启用 H8 SPI OLED 时，灰度 AD1 和 KEY1/KEY2 必须重新分配或暂时停用，否则 OLED、灰度和按键会互相抢 IO。
 
 ### UART0 保留调试
 

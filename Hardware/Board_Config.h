@@ -168,8 +168,7 @@
 
 /* ---------------- I2C0 shared bus ----------------
  * Use 3.3V power and pull SDA/SCL up to 3.3V.  Do not pull I2C to 5V.
- * PA1/PA0 still match the LCKFB IIC SSD1306 wiring and remain available for
- * MPU6050 or an external 4-pin IIC OLED if H8 SPI OLED is disabled.
+ * PA1/PA0 remain available for MPU6050 or an external 4-pin IIC OLED.
  */
 #define I2C0_SCL_PORT                   GPIO_I2C0_SCL_PORT
 #define I2C0_SCL_PIN                    GPIO_I2C0_SCL_PIN
@@ -188,25 +187,34 @@
 #define OLED_I2C_SDA_PIN                I2C0_SDA_PIN
 #define MPU6050_I2C_INST                BOARD_I2C0_INST
 
-/* ---------------- H8 SPI OLED header ----------------
- * Tianmengxing H8 1x8 display header for 0.96/1.3-inch SPI SSD1306 OLED:
+/* ---------------- Tianmengxing H8 OLED header ----------------
+ * Tianmengxing H8 1x8 display header:
  * H8-1 GND, H8-2 3V3, H8-3 SCL/PB9, H8-4 SDA/PB8,
  * H8-5 RES/PB10, H8-6 DC/PB11, H8-7 CS/PB14.
  *
- * These are board-fixed pins.  Enabling this display takes ownership of
- * PB10/PB11/PB14, so the current grayscale AD1 and KEY1/KEY2 wiring cannot
- * be used at the same time unless those signals are rewired.
+ * Current display wiring is a 4-pin IIC OLED plugged into H8 first 4 pins:
+ * GND, VCC, SCL/SKC, SDA -> PB9/PB8 through software I2C.
+ *
+ * H8 IIC mode only uses PB9/PB8. H8 SPI mode also takes PB10/PB11/PB14,
+ * so grayscale AD1 and KEY1/KEY2 cannot be used at the same time unless
+ * those signals are rewired.
  */
+#ifndef BOARD_OLED_USE_H8_I2C
+#define BOARD_OLED_USE_H8_I2C           1U
+#endif
 #ifndef BOARD_OLED_USE_H8_SPI
-#define BOARD_OLED_USE_H8_SPI           1U
+#define BOARD_OLED_USE_H8_SPI           0U
+#endif
+#if BOARD_OLED_USE_H8_I2C && BOARD_OLED_USE_H8_SPI
+#error "Choose either H8 I2C OLED or H8 SPI OLED, not both."
 #endif
 #define BOARD_OLED_H8_SPI_OWNS_GRAY_AD1 BOARD_OLED_USE_H8_SPI
 #define BOARD_OLED_H8_SPI_OWNS_KEY12    BOARD_OLED_USE_H8_SPI
 
 #define OLED_H8_PORT                    GPIOB
-#define OLED_H8_SCL_PIN                 DL_GPIO_PIN_9    /* H8-3, SPI SCK */
+#define OLED_H8_SCL_PIN                 DL_GPIO_PIN_9    /* H8-3, SCL/SCK */
 #define OLED_H8_SCL_IOMUX               IOMUX_PINCM26
-#define OLED_H8_SDA_PIN                 DL_GPIO_PIN_8    /* H8-4, SPI MOSI */
+#define OLED_H8_SDA_PIN                 DL_GPIO_PIN_8    /* H8-4, SDA/MOSI */
 #define OLED_H8_SDA_IOMUX               IOMUX_PINCM25
 #define OLED_H8_RES_PIN                 DL_GPIO_PIN_10   /* H8-5 */
 #define OLED_H8_RES_IOMUX               IOMUX_PINCM27
