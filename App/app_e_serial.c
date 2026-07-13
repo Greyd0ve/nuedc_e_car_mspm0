@@ -9,7 +9,6 @@
 #include "PWM.h"
 #include "Serial.h"
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* 文本帧串口控制台。
@@ -98,33 +97,91 @@ static char *ESerial_Trim(char *text)
     return text;
 }
 
+static uint8_t ESerial_IsDigit(char ch)
+{
+    return (uint8_t)((ch >= '0') && (ch <= '9'));
+}
+
 static uint8_t ESerial_ParseFloat(const char *text, float *value)
 {
-    char *endPtr;
-    double parsed;
+    const char *p;
+    uint8_t negative = 0U;
+    uint8_t hasDigit = 0U;
+    uint32_t integerPart = 0U;
+    uint32_t fracPart = 0U;
+    uint32_t fracScale = 1U;
+    float result;
 
-    if (text == 0 || value == 0)
+    if ((text == 0) || (value == 0))
     {
         return 0U;
     }
 
-    /* 拒绝部分解析结果，避免畸形字段被误当成合法调参值。 */
-    parsed = strtod(text, &endPtr);
-    if (endPtr == text)
+    p = text;
+
+    while ((*p == ' ') || (*p == '\t'))
+    {
+        p++;
+    }
+
+    if (*p == '-')
+    {
+        negative = 1U;
+        p++;
+    }
+    else if (*p == '+')
+    {
+        p++;
+    }
+
+    while (ESerial_IsDigit(*p))
+    {
+        hasDigit = 1U;
+        if (integerPart < 1000000U)
+        {
+            integerPart = integerPart * 10U + (uint32_t)(*p - '0');
+        }
+        p++;
+    }
+
+    if (*p == '.')
+    {
+        p++;
+
+        while (ESerial_IsDigit(*p))
+        {
+            hasDigit = 1U;
+            if (fracScale < 100000U)
+            {
+                fracPart = fracPart * 10U + (uint32_t)(*p - '0');
+                fracScale *= 10U;
+            }
+            p++;
+        }
+    }
+
+    while ((*p == ' ') || (*p == '\t'))
+    {
+        p++;
+    }
+
+    if ((*p != '\0') || (hasDigit == 0U))
     {
         return 0U;
     }
 
-    while (*endPtr == ' ' || *endPtr == '\t')
+    result = (float)integerPart;
+    if (fracScale > 1U)
     {
-        endPtr++;
-    }
-    if (*endPtr != '\0')
-    {
-        return 0U;
+        result += (float)fracPart / (float)fracScale;
     }
 
-    *value = (float)parsed;
+    if (negative)
+    {
+        result = -result;
+    }
+
+    *value = result;
     return 1U;
 }
 
