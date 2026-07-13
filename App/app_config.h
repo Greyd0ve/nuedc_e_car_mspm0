@@ -16,16 +16,16 @@
 #define ECAR_BOARD_TEST_MODE                    1
 #endif
 #ifndef ECAR_TEST_MOTOR_ENABLE
-#define ECAR_TEST_MOTOR_ENABLE                  0
+#define ECAR_TEST_MOTOR_ENABLE                  1
 #endif
 #ifndef ECAR_TEST_SERVO_ENABLE
 #define ECAR_TEST_SERVO_ENABLE                  0
 #endif
 #ifndef ECAR_TEST_BEEP_ENABLE
-#define ECAR_TEST_BEEP_ENABLE                   1
+#define ECAR_TEST_BEEP_ENABLE                   0
 #endif
 #ifndef ECAR_TEST_OLED_ENABLE
-#define ECAR_TEST_OLED_ENABLE                   1
+#define ECAR_TEST_OLED_ENABLE                   0
 #endif
 #ifndef ECAR_TEST_IMU_ENABLE
 #define ECAR_TEST_IMU_ENABLE                    0

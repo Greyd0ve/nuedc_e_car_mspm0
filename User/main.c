@@ -26,11 +26,10 @@ volatile uint8_t g_task_200ms_count = 0U;
 
 /*
  * mspm0g3507.sct places this section at the end of flash with +Last.
- * Keep it unconditional, otherwise the linker reports:
- * L6236E: No section matches selector - no section to be FIRST/LAST.
+ * Keep this section, but keep it small to avoid MDK Lite 32KB limit.
  */
 __attribute__((used, section(".rodata.flash_tail_pad")))
-static const uint8_t s_flashTailPadForKeilFlm[0x978] = { 0U };
+static const uint8_t s_flashTailPadForKeilFlm[0x10] = { 0U };
 
 static uint8_t Main_TakeTaskCounterAll(volatile uint8_t *counter)
 {
