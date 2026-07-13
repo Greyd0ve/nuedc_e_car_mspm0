@@ -13,4 +13,8 @@ int16_t Encoder_GetRightDelta(void);
 /* 清空左右编码器待处理增量累计值。 */
 void Encoder_ClearAll(void);
 
+uint32_t Encoder_GetRightIsrCount(void);
+uint32_t Encoder_GetRightSameAIgnored(void);
+uint32_t Encoder_GetRightStatusCount(void);
+
 #endif

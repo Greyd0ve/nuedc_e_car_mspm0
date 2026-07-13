@@ -2,6 +2,7 @@
 #include "app_config.h"
 #include "Board_Config.h"
 #include "BeepLed.h"
+#include "Encoder.h"
 #include "Grayscale.h"
 #include "IMU.h"
 #include "Key.h"
@@ -13,6 +14,8 @@
 
 extern volatile int32_t g_leftEncoderTotal;
 extern volatile int32_t g_rightEncoderTotal;
+extern volatile int16_t g_leftEncoderDelta;
+extern volatile int16_t g_rightEncoderDelta;
 
 static uint16_t s_ledBlinkMs = 0U;
 
@@ -86,9 +89,17 @@ static void BoardTest_PrintGray(void)
 
 static void BoardTest_PrintEncoder(void)
 {
-    Serial_Printf("[enc] left=%ld right=%ld\r\n",
+    Serial_Printf("[enc] left=%ld right=%ld ld=%d rd=%d LA=%u LB=%u RA=%u RB=%u risr=%lu rign=%lu\r\n",
         (long)g_leftEncoderTotal,
-        (long)g_rightEncoderTotal);
+        (long)g_rightEncoderTotal,
+        (int)g_leftEncoderDelta,
+        (int)g_rightEncoderDelta,
+        (unsigned int)BoardTest_ReadKeyLevel(ENC_L_A_PORT, ENC_L_A_PIN),
+        (unsigned int)BoardTest_ReadKeyLevel(ENC_L_B_PORT, ENC_L_B_PIN),
+        (unsigned int)BoardTest_ReadKeyLevel(ENC_R_A_PORT, ENC_R_A_PIN),
+        (unsigned int)BoardTest_ReadKeyLevel(ENC_R_B_PORT, ENC_R_B_PIN),
+        (unsigned long)Encoder_GetRightIsrCount(),
+        (unsigned long)Encoder_GetRightSameAIgnored());
 }
 
 static void BoardTest_PrintOptionalStatus(void)

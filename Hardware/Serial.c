@@ -90,6 +90,15 @@ void Serial_SendNumber(uint32_t number, uint8_t length)
     char buf[11];
     uint8_t i;
 
+    if (length == 0U)
+    {
+        return;
+    }
+    if (length > 10U)
+    {
+        length = 10U;
+    }
+
     for (i = 0U; i < length && i < 10U; i++)
     {
         buf[length - 1U - i] = (char)('0' + (number % 10U));

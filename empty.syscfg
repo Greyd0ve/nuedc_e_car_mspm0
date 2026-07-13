@@ -58,8 +58,11 @@ GPIO1.associatedPins[3].initialValue = "CLEARED";
 
 /*
  * Encoder first pass:
- * M1 = left, M2 = right.  A phase is interrupt input, B phase is sampled.
+ * M1 = left, M2 = right.  A phase is rising-edge interrupt input,
+ * B phase is sampled for direction.
  * ENC_L_A/ENC_L_B = PA26/PA27, ENC_R_A/ENC_R_B = PA25/PA14.
+ * PA25/PA26/PA27/PA14 do not accept SysConfig forced hysteresis on this
+ * package, so keep internal pull-ups and enable the GPIO digital filter.
  */
 GPIO2.$name = "GPIO_ENCODER";
 GPIO2.associatedPins.create(4);
@@ -69,28 +72,32 @@ GPIO2.associatedPins[0].assignedPin      = "26";
 GPIO2.associatedPins[0].pin.$assign      = "PA26";
 GPIO2.associatedPins[0].direction        = "INPUT";
 GPIO2.associatedPins[0].internalResistor = "PULL_UP";
+GPIO2.associatedPins[0].inputFilter      = "8_CYCLES";
 GPIO2.associatedPins[0].interruptEn      = true;
-GPIO2.associatedPins[0].polarity         = "RISE_FALL";
+GPIO2.associatedPins[0].polarity         = "RISE";
 GPIO2.associatedPins[1].$name            = "L_B";
 GPIO2.associatedPins[1].assignedPort     = "PORTA";
 GPIO2.associatedPins[1].assignedPin      = "27";
 GPIO2.associatedPins[1].pin.$assign      = "PA27";
 GPIO2.associatedPins[1].direction        = "INPUT";
 GPIO2.associatedPins[1].internalResistor = "PULL_UP";
+GPIO2.associatedPins[1].inputFilter      = "8_CYCLES";
 GPIO2.associatedPins[2].$name            = "R_A";
 GPIO2.associatedPins[2].assignedPort     = "PORTA";
 GPIO2.associatedPins[2].assignedPin      = "25";
 GPIO2.associatedPins[2].pin.$assign      = "PA25";
 GPIO2.associatedPins[2].direction        = "INPUT";
 GPIO2.associatedPins[2].internalResistor = "PULL_UP";
+GPIO2.associatedPins[2].inputFilter      = "8_CYCLES";
 GPIO2.associatedPins[2].interruptEn      = true;
-GPIO2.associatedPins[2].polarity         = "RISE_FALL";
+GPIO2.associatedPins[2].polarity         = "RISE";
 GPIO2.associatedPins[3].$name            = "R_B";
 GPIO2.associatedPins[3].assignedPort     = "PORTA";
 GPIO2.associatedPins[3].assignedPin      = "14";
 GPIO2.associatedPins[3].pin.$assign      = "PA14";
 GPIO2.associatedPins[3].direction        = "INPUT";
 GPIO2.associatedPins[3].internalResistor = "PULL_UP";
+GPIO2.associatedPins[3].inputFilter      = "8_CYCLES";
 
 /*
  * 8-channel grayscale module:
