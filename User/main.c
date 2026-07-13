@@ -24,10 +24,13 @@ volatile uint8_t g_task_10ms_count = 0U;
 volatile uint8_t g_task_100ms_count = 0U;
 volatile uint8_t g_task_200ms_count = 0U;
 
-#if ECAR_ENCODER_MINIMAL_DEBUG
+/*
+ * mspm0g3507.sct places this section at the end of flash with +Last.
+ * Keep it unconditional, otherwise the linker reports:
+ * L6236E: No section matches selector - no section to be FIRST/LAST.
+ */
 __attribute__((used, section(".rodata.flash_tail_pad")))
 static const uint8_t s_flashTailPadForKeilFlm[0x978] = { 0U };
-#endif
 
 static uint8_t Main_TakeTaskCounterAll(volatile uint8_t *counter)
 {
