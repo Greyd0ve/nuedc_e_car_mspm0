@@ -183,10 +183,45 @@ void Encoder_Init(void)
     NVIC_EnableIRQ(ENCODER_GPIO_IRQN);
 #endif
 
-    if (primask == 0U)
-    {
-        __enable_irq();
-    }
+		if (primask == 0U)
+		{
+				__enable_irq();
+		}
+
+		#if !ENCODER_DEBUG_DISABLE_GPIO_IRQ
+		delay_cycles(320000U);
+
+		primask = __get_PRIMASK();
+		__disable_irq();
+
+		DL_GPIO_clearInterruptStatus(ENC_L_A_PORT, ENC_L_A_PIN);
+		DL_GPIO_clearInterruptStatus(ENC_R_A_PORT, ENC_R_A_PIN);
+		NVIC_ClearPendingIRQ(ENCODER_GPIO_IRQN);
+
+		s_leftALast = Encoder_ReadLevel(ENC_L_A_PORT, ENC_L_A_PIN);
+		s_rightALast = Encoder_ReadLevel(ENC_R_A_PORT, ENC_R_A_PIN);
+
+		s_leftDelta = 0;
+		s_rightDelta = 0;
+
+		s_leftIsrCount = 0U;
+		s_leftSameAIgnored = 0U;
+		s_leftStatusCount = 0U;
+
+		s_rightIsrCount = 0U;
+		s_rightSameAIgnored = 0U;
+		s_rightStatusCount = 0U;
+		s_rightLastRawDeltaBeforeLimit = 0;
+		s_rightLimitHitCount = 0U;
+		s_rightGetDeltaCount = 0U;
+		s_rightNonZeroGetCount = 0U;
+		s_rightMaxRawDelta = 0;
+
+		if (primask == 0U)
+		{
+				__enable_irq();
+		}
+		#endif
 }
 
 int16_t Encoder_GetLeftDelta(void)
