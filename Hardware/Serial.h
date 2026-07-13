@@ -3,7 +3,7 @@
 
 
 #include <stdarg.h>
-#include <stdint.h>
+#include <stdio.h>
 
 /* 初始化 UART RX 中断，并清空软件接收环形缓冲区。 */
 void Serial_Init(void);
