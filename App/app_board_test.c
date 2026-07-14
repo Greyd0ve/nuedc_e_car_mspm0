@@ -19,6 +19,16 @@ extern volatile int16_t g_rightEncoderDelta;
 extern volatile int16_t g_rightLastNonZeroDelta;
 extern volatile uint32_t g_rightNonZeroDeltaCount;
 extern volatile uint32_t g_rightLimitDeltaCount;
+extern volatile float g_leftSpeed;
+extern volatile float g_rightSpeed;
+extern volatile float g_forwardSpeed;
+extern volatile float g_turnSpeed;
+extern volatile float g_targetForwardSpeed;
+extern volatile float g_targetTurnSpeed;
+extern volatile float g_speedPwm;
+extern volatile float g_diffPwm;
+extern volatile int16_t g_leftPwm;
+extern volatile int16_t g_rightPwm;
 
 static uint16_t s_ledBlinkMs = 0U;
 
