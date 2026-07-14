@@ -43,7 +43,7 @@ ECarParam_t g_eCarParam =
     ECAR_DEFAULT_CORNER_TURN_CMPS,
 
     0.035f,
-		0.080f,
+		0.020f,
 		ECAR_DEFAULT_TURN_LIMIT_CMPS,
 
     500U,
