@@ -12,6 +12,12 @@
 #define APP_PWM_LIMIT_MIN       0.0f    /* PWM 输出下限，防止负限幅传入 PID */
 #define APP_FORWARD_I_LIMIT     260.0f  /* 前进速度 PID 积分限幅 */
 #define APP_TURN_I_LIMIT        220.0f  /* 转向差速 PID 积分限幅 */
+#define APP_SPEED_FILTER_ALPHA  0.20f   /* 速度环滤波参数 */
+
+#define APP_MOTOR_START_PWM        120.0f //基础PWM
+#define APP_SPEED_TO_PWM_K         1.5f   //
+#define APP_SPEED_CORR_LIMIT       30.0f  //速度限幅
+
 
 /* PID 调参量和运行遥测变量由 app_e_car.c 定义，串口、OLED 和控制环共享同一份状态。
  */
@@ -105,7 +111,9 @@ void App_Control_UpdateEncoderSpeed(uint16_t periodMs)
     int16_t leftDelta;
     int16_t rightDelta;
     float speedScale;
-
+		float leftSpeedNow;
+    float rightSpeedNow;
+	
     if (periodMs == 0U)
     {
         /* 防御性处理：避免 periodMs 为 0 时除 0。 */
@@ -134,10 +142,38 @@ void App_Control_UpdateEncoderSpeed(uint16_t periodMs)
     g_forwardEncoderTotal = (g_leftEncoderTotal + g_rightEncoderTotal) / 2;
     g_turnEncoderTotal = (g_rightEncoderTotal - g_leftEncoderTotal) / 2;
 
-    g_leftSpeed = (float)leftDelta * speedScale;
-    g_rightSpeed = (float)rightDelta * speedScale;
+    
+
+    leftSpeedNow = (float)leftDelta * speedScale;
+    rightSpeedNow = (float)rightDelta * speedScale;
+
+    g_leftSpeed += APP_SPEED_FILTER_ALPHA * (leftSpeedNow - g_leftSpeed);
+    g_rightSpeed += APP_SPEED_FILTER_ALPHA * (rightSpeedNow - g_rightSpeed);
+
     g_forwardSpeed = (g_leftSpeed + g_rightSpeed) * 0.5f;
     g_turnSpeed = (g_rightSpeed - g_leftSpeed) * 0.5f;
+}
+
+static float App_Control_SpeedFeedForward(float targetSpeed)
+{
+    float absSpeed;
+    float pwm;
+
+    if ((targetSpeed > -0.5f) && (targetSpeed < 0.5f))
+    {
+        return 0.0f;
+    }
+
+    absSpeed = (targetSpeed >= 0.0f) ? targetSpeed : -targetSpeed;
+
+    pwm = APP_MOTOR_START_PWM + APP_SPEED_TO_PWM_K * absSpeed;
+
+    if (targetSpeed < 0.0f)
+    {
+        pwm = -pwm;
+    }
+
+    return pwm;
 }
 
 void App_Control_ApplyMotorOutput(void)
@@ -164,12 +200,29 @@ void App_Control_ApplyMotorOutput(void)
     PID_SetOutputLimit(&ForwardPID, pwmLimit);
     PID_SetOutputLimit(&TurnPID, pwmLimit * 0.85f);
 
+		
+    float ffPwm;
+    float corrPwm;
+
     g_forwardSpeedError = g_targetForwardSpeed - g_forwardSpeed;
-    g_speedPwm = PID_Calc(&ForwardPID, g_targetForwardSpeed, g_forwardSpeed);
-    g_diffPwm = PID_Calc(&TurnPID, g_targetTurnSpeed, g_turnSpeed);
+
+    ffPwm = App_Control_SpeedFeedForward(g_targetForwardSpeed);
+
+    corrPwm = PID_Calc(&ForwardPID, g_targetForwardSpeed, g_forwardSpeed);
+    corrPwm = App_Control_LimitFloat(corrPwm,
+                                     -APP_SPEED_CORR_LIMIT,
+                                     APP_SPEED_CORR_LIMIT);
+
+    g_speedPwm = ffPwm + corrPwm;
+
+    /*
+     * 第一阶段先关闭差速修正，避免左右轮速度量化噪声导致抖动。
+     */
+    g_diffPwm = 0.0f;
 
     leftPwmTemp = (int32_t)(g_speedPwm - g_diffPwm);
     rightPwmTemp = (int32_t)(g_speedPwm + g_diffPwm);
+
 
     g_leftPwm = App_Control_LimitI16(leftPwmTemp, (int16_t)(-pwmLimit), (int16_t)pwmLimit);
     g_rightPwm = App_Control_LimitI16(rightPwmTemp, (int16_t)(-pwmLimit), (int16_t)pwmLimit);

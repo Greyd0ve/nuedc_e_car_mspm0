@@ -49,12 +49,13 @@ ECarParam_t g_eCarParam =
     5U
 };
 
-volatile float g_forwardKp = 10.0f;
-volatile float g_forwardKi = 0.35f;
-volatile float g_forwardKd = 0.8f;
-volatile float g_turnKp = 8.0f;
-volatile float g_turnKi = 0.02f;
-volatile float g_turnKd = 0.5f;
+volatile float g_forwardKp = 2.0f;
+volatile float g_forwardKi = 0.0f;
+volatile float g_forwardKd = 0.0f;
+
+volatile float g_turnKp = 0.0f;
+volatile float g_turnKi = 0.0f;
+volatile float g_turnKd = 0.0f;
 
 volatile float g_pwmLimit = (float)PWM_MAX_DUTY * 0.55f;
 volatile float g_targetForwardSpeed = 0.0f;
