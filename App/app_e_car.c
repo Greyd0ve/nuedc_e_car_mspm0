@@ -767,7 +767,7 @@ void ECar_KeyProcess(void)
             }
             ECar_SafeStop();
             ECar_SetState(E_CAR_READY);
-            ECar_PromptStart((uint16_t)(80U + 30U * s_targetLap));
+            LED_User_BlinkTimes(s_targetLap, 500U);
         }
         return;
     }
