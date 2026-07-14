@@ -19,7 +19,7 @@
 #define E_SERIAL_FIELD_MAX       8U                       /* 单帧最多字段数 */
 #define E_SERIAL_FIELD_LEN       16U                      /* 预留字段长度常量，当前不作为数组长度使用 */
 #define E_SERIAL_PLOT_PERIOD_MS  ECAR_SERIAL_PLOT_PERIOD_MS /* 串口曲线/遥测输出周期，单位 ms */
-#define E_SERIAL_LINE_PERIOD_MS  500U                     /* 正式模式 [line] 遥测输出周期，单位 ms */
+#define E_SERIAL_LINE_PERIOD_MS  200U                     /* 正式模式 [line] 遥测输出周期，单位 ms */
 #define E_SERIAL_JOYSTICK_ACK_MS 500U                     /* joystick 忽略提示最小间隔，单位 ms */
 
 extern volatile float g_targetForwardSpeed;

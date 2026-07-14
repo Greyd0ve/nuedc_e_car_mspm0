@@ -31,6 +31,12 @@
 #define ECAR_TEST_IMU_ENABLE                    0
 #endif
 
+/* Master OLED switch. Set to 1 only when the display is physically connected.
+ * When 0, all OLED_Init / OLED_Clear / ECar_ShowStatus calls are compiled out. */
+#ifndef ECAR_OLED_ENABLE
+#define ECAR_OLED_ENABLE                        0
+#endif
+
 /* Cooperative task periods driven by the 1ms timer ISR. */
 #ifndef ECAR_TASK_COUNT_MAX
 #define ECAR_TASK_COUNT_MAX                     5U

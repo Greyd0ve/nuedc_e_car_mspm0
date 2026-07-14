@@ -112,7 +112,7 @@ int main(void)
     ECar_Init();
     ECar_Serial_Init();
 
-#if ECAR_TEST_OLED_ENABLE || !ECAR_BOARD_TEST_MODE
+#if ECAR_OLED_ENABLE
     OLED_Init();
     OLED_Clear();
 #endif
@@ -125,7 +125,9 @@ int main(void)
     BoardTest_Init();
 #else
     App_Line_GPIOForceInit();
+#if ECAR_OLED_ENABLE
     ECar_ShowStatus();
+#endif
 #endif
 
     Timer_Init();
@@ -175,7 +177,7 @@ int main(void)
         {
 #if ECAR_BOARD_TEST_MODE
             BoardTest_Task200ms();
-#else
+#elif ECAR_OLED_ENABLE
             ECar_ShowStatus();
 #endif
         }
