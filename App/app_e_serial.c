@@ -586,6 +586,62 @@ static void ESerial_HandleBoardTest(char *fields[], uint8_t fieldCount, uint8_t 
         return;
 #endif
     }
+		
+		    if (ESerial_StrEqualIgnoreCase(fields[commandIndex], "speed"))
+    {
+#if !ECAR_TEST_MOTOR_ENABLE
+        ESerial_BoardTestStopMotor();
+        Serial_SendString("[status,err,motor-test-disabled]\r\n");
+        return;
+#else
+        float forwardValue;
+        float turnValue;
+
+        if (fieldCount <= (uint8_t)(commandIndex + 2U))
+        {
+            ESerial_SendBadPacket();
+            return;
+        }
+
+        if (!s_boardTestMotorArmed)
+        {
+            Serial_SendString("[status,err,test-locked]\r\n");
+            return;
+        }
+
+        if (!ESerial_ParseFloat(fields[commandIndex + 1U], &forwardValue) ||
+            !ESerial_ParseFloat(fields[commandIndex + 2U], &turnValue))
+        {
+            ESerial_SendRangeError("speed");
+            return;
+        }
+
+        /*
+         * 第一阶段速度闭环测试不要太快：
+         * forward 限制在 -25 ~ 25 cm/s；
+         * turn 限制在 -30 ~ 30 cm/s。
+         */
+        if (!ESerial_ValueInRange(forwardValue, -25.0f, 25.0f) ||
+            !ESerial_ValueInRange(turnValue, -30.0f, 30.0f))
+        {
+            ESerial_SendRangeError("speed");
+            return;
+        }
+
+        g_targetForwardSpeed = forwardValue;
+        g_targetTurnSpeed = turnValue;
+        g_carEnable = 1U;
+
+        App_Control_ResetPID();
+
+        Serial_SendString("[status,ok,test,speed,");
+        ESerial_SendFixedValue(g_targetForwardSpeed, 1U);
+        Serial_SendString(",");
+        ESerial_SendFixedValue(g_targetTurnSpeed, 1U);
+        Serial_SendString("]\r\n");
+        return;
+#endif
+    }
 
     ESerial_SendUnknownError(fields[commandIndex]);
 }

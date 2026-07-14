@@ -22,6 +22,30 @@ extern volatile uint32_t g_rightLimitDeltaCount;
 
 static uint16_t s_ledBlinkMs = 0U;
 
+static int32_t BoardTest_FloatToX10(float value)
+{
+    if (value >= 0.0f)
+    {
+        return (int32_t)(value * 10.0f + 0.5f);
+    }
+    return (int32_t)(value * 10.0f - 0.5f);
+}
+
+static void BoardTest_PrintSpeedLoop(void)
+{
+    Serial_Printf("[speed] target=%ld turn=%ld left=%ld right=%ld forward=%ld turnNow=%ld pwmL=%d pwmR=%d spwm=%ld dpwm=%ld\r\n",
+        (long)BoardTest_FloatToX10(g_targetForwardSpeed),
+        (long)BoardTest_FloatToX10(g_targetTurnSpeed),
+        (long)BoardTest_FloatToX10(g_leftSpeed),
+        (long)BoardTest_FloatToX10(g_rightSpeed),
+        (long)BoardTest_FloatToX10(g_forwardSpeed),
+        (long)BoardTest_FloatToX10(g_turnSpeed),
+        (int)g_leftPwm,
+        (int)g_rightPwm,
+        (long)BoardTest_FloatToX10(g_speedPwm),
+        (long)BoardTest_FloatToX10(g_diffPwm));
+}
+
 static uint8_t BoardTest_ReadKeyLevel(GPIO_Regs *port, uint32_t pin)
 {
     return (DL_GPIO_readPins(port, pin) != 0U) ? 1U : 0U;
@@ -189,11 +213,15 @@ void BoardTest_Task10ms(void)
         Serial_Printf("[key-event] key=%u\r\n", (unsigned int)key);
     }
 
-#if !ECAR_TEST_MOTOR_ENABLE
+#if ECAR_TEST_MOTOR_ENABLE
+    if (g_carEnable)
+    {
+        App_Control_ApplyMotorOutput();
+    }
+#else
     Motor_StopAll();
 #endif
 }
-
 void BoardTest_Task100ms(void)
 {
     /* Keep PB04 / LED_USER low by default. */
@@ -214,6 +242,6 @@ void BoardTest_Task200ms(void)
     BoardTest_PrintKey();
     BoardTest_PrintGray();
     BoardTest_PrintEncoder();
-
+		BoardTest_PrintSpeedLoop();
   
 }
