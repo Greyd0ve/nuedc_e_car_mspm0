@@ -130,6 +130,7 @@ static volatile int32_t s_cornerTurnStartPulse = 0;
 
 static float s_lineDError = 0.0f;
 static float s_lastLineError = 0.0f;
+static uint8_t s_lineDerivResetPending = 0U;
 
 static float ECar_LimitFloat(float value, float minVal, float maxVal)
 {
@@ -264,6 +265,8 @@ static void ECar_ResetLineState(void)
     g_lastLineDir = 1;
     g_lineLostMs = 0U;
     s_lastLineError = 0.0f;
+    s_lineDError = 0.0f;
+    s_lineDerivResetPending = 0U;
     s_cornerCandidateCount = 0U;
 }
 
@@ -321,7 +324,17 @@ static float ECar_CalcLineTurnCmd(void)
     float turn;
 
     error = (float)g_lineError;
-    dError = error - s_lastLineError;
+
+    if (s_lineDerivResetPending)
+    {
+        dError = 0.0f;
+        s_lineDerivResetPending = 0U;
+    }
+    else
+    {
+        dError = error - s_lastLineError;
+    }
+
     s_lastLineError = error;
     s_lineDError = dError;
 
@@ -442,6 +455,8 @@ static void ECar_EnterRecover(void)
     /* 角点转向后进入恢复状态，等待稳定普通黑线。 */
     s_lostMs = 0U;
     s_recoverStableMsCount = 0U;
+    App_Control_ResetPID();
+    s_lineDerivResetPending = 1U;
     ECar_SetState(E_CAR_LINE_RECOVER);
 }
 
@@ -523,6 +538,8 @@ static void ECar_HandleCornerEnter(void)
 
     s_lostMs = 0U;
     s_recoverStableMsCount = 0U;
+    App_Control_ResetPID();
+    s_lineDerivResetPending = 1U;
     ECar_SetState(E_CAR_CORNER_TURN);
 }
 
