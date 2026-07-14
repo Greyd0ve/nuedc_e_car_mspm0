@@ -95,8 +95,8 @@
 #define MOTOR_BIN2_PORT                 MOTOR_R_IN2_PORT
 #define MOTOR_BIN2_PIN                  MOTOR_R_IN2_PIN
 
-#define LEFT_MOTOR_DIR                  (-1)
-#define RIGHT_MOTOR_DIR                 (+1)
+#define LEFT_MOTOR_DIR                  (+1)
+#define RIGHT_MOTOR_DIR                 (-1)
 #define LEFT_MOTOR_DIR_SIGN             LEFT_MOTOR_DIR
 #define RIGHT_MOTOR_DIR_SIGN            RIGHT_MOTOR_DIR
 
