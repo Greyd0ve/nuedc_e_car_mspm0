@@ -10,6 +10,7 @@
 #include "OLED.h"
 #include "Serial.h"
 #include "Servo.h"
+#include "app_control.h"
 #include <stdint.h>
 
 extern volatile int32_t g_leftEncoderTotal;
@@ -29,6 +30,8 @@ extern volatile float g_speedPwm;
 extern volatile float g_diffPwm;
 extern volatile int16_t g_leftPwm;
 extern volatile int16_t g_rightPwm;
+extern volatile uint8_t g_carEnable;
+
 
 static uint16_t s_ledBlinkMs = 0U;
 
