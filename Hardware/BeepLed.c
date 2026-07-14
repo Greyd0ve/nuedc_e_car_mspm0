@@ -45,7 +45,10 @@ void BeepLed_Tick1ms(void)
         return;
     }
 
-    s_ledBlinkTimerMs--;
+    if (s_ledBlinkTimerMs > 0U)
+    {
+        s_ledBlinkTimerMs--;
+    }
     if (s_ledBlinkTimerMs == 0U)
     {
         s_ledBlinkRemainToggles--;
