@@ -48,12 +48,9 @@
 #define ECAR_PI_F                               3.1415926f
 #define ECAR_WHEEL_DIAMETER_CM                 6.5f
 #define ECAR_WHEEL_CIRCUMFERENCE_CM            (ECAR_WHEEL_DIAMETER_CM * ECAR_PI_F)
-#define ECAR_ENCODER_BASE_PPR                  11.0f
-#define ECAR_GEAR_RATIO                        35.5f
-#ifndef ECAR_ENCODER_EDGE_MULTIPLIER
-#define ECAR_ENCODER_EDGE_MULTIPLIER           1.0f
-#endif
-#define ECAR_ENCODER_PULSE_PER_REV             (ECAR_ENCODER_BASE_PPR * ECAR_GEAR_RATIO * ECAR_ENCODER_EDGE_MULTIPLIER)
+
+/* New motor measured value: 367 pulses per wheel revolution. */
+#define ECAR_ENCODER_PULSE_PER_REV             367.0f
 #define ECAR_CM_PER_PULSE                      (ECAR_WHEEL_CIRCUMFERENCE_CM / ECAR_ENCODER_PULSE_PER_REV)
 
 /* Square track nominal distances. Tune with telemetry after hardware tests. */
