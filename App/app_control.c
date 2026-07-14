@@ -208,6 +208,9 @@ void App_Control_ResetPID(void)
 {
     PID_Reset(&ForwardPID);
     PID_Reset(&TurnPID);
+
+    s_leftSpeedI = 0.0f;
+    s_rightSpeedI = 0.0f;
 }
 
 void App_Control_ForcePWMZero(void)

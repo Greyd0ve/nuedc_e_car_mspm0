@@ -31,7 +31,7 @@
 #define ECAR_LINE_ERR_SLOW_GAIN       7.0f
 #define ECAR_LINE_DERR_SLOW_GAIN      3.0f
 
-#define ECAR_CORNER_TURN_PULSE_DEFAULT  420
+#define ECAR_CORNER_TURN_PULSE_DEFAULT  180
 
 
 ECarParam_t g_eCarParam =
@@ -528,56 +528,34 @@ static void ECar_HandleCornerEnter(void)
 
 static void ECar_HandleCornerTurn(void)
 {
-	
-	
-		
-			int32_t turnPulse;
-			int32_t turnDelta;
+    int32_t turnPulse;
+    int32_t turnDelta;
 
-			turnPulse = g_turnEncoderTotal - s_cornerTurnStartPulse;
-			if (turnPulse < 0)
-			{
-					turnDelta = -turnPulse;
-			}
-			else
-			{
-					turnDelta = turnPulse;
-			}
+    turnPulse = g_turnEncoderTotal - s_cornerTurnStartPulse;
+    turnDelta = (turnPulse >= 0) ? turnPulse : -turnPulse;
 
-			ECar_SetSpeedCmd(0.0f,
-											 g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN);
-
-			if (turnDelta >= ECAR_CORNER_TURN_PULSE_DEFAULT)
-			{
-					ECar_EnterRecover();
-					return;
-			}
-	
-    /* 角点黑块区域采用开环转弯，保证动作可预测。 */
-    ECar_SetSpeedCmd(g_eCarParam.corner_forward_speed,
+    /*
+     * 角点阶段优先原地转向，不再叠加 forward。
+     */
+    ECar_SetSpeedCmd(0.0f,
                      g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN);
 
-    if (s_stateMs >= g_eCarParam.corner_min_turn_ms)
+    if (turnDelta >= ECAR_CORNER_TURN_PULSE_DEFAULT)
     {
-        if (ECar_IsStableLineAfterCorner())
-        {
-            ECar_EnterRecover();
-            return;
-        }
+        ECar_EnterRecover();
+        return;
     }
 
+    /*
+     * 时间只作为保护，避免编码器异常时一直转。
+     */
     if (s_stateMs >= g_eCarParam.corner_max_turn_ms)
     {
-        if (g_lineValid)
-        {
-            ECar_EnterRecover();
-        }
-        else
-        {
-            ECar_EnterFault(E_CAR_FAULT_CORNER_TIMEOUT);
-        }
+        ECar_EnterRecover();
+        return;
     }
 }
+
 
 static void ECar_HandleRecover(void)
 {
