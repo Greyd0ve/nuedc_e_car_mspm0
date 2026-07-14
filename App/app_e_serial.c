@@ -19,6 +19,7 @@
 #define E_SERIAL_FIELD_MAX       8U                       /* 单帧最多字段数 */
 #define E_SERIAL_FIELD_LEN       16U                      /* 预留字段长度常量，当前不作为数组长度使用 */
 #define E_SERIAL_PLOT_PERIOD_MS  ECAR_SERIAL_PLOT_PERIOD_MS /* 串口曲线/遥测输出周期，单位 ms */
+#define E_SERIAL_LINE_PERIOD_MS  500U                     /* 正式模式 [line] 遥测输出周期，单位 ms */
 #define E_SERIAL_JOYSTICK_ACK_MS 500U                     /* joystick 忽略提示最小间隔，单位 ms */
 
 extern volatile float g_targetForwardSpeed;
@@ -44,6 +45,7 @@ static uint8_t s_receiving = 0U;
 static uint8_t s_packetLen = 0U;
 static char s_packet[E_SERIAL_PACKET_BUF_SIZE];
 static uint16_t s_plotMs = 0U;
+static uint16_t s_lineTelemMs = 0U;
 static uint32_t s_serialMs = 0U;
 static uint32_t s_lastJoystickAckMs = 0U;
 static uint8_t s_joystickAcked = 0U;
@@ -925,6 +927,7 @@ void ECar_Serial_Init(void)
     s_receiving = 0U;
     s_packetLen = 0U;
     s_plotMs = 0U;
+    s_lineTelemMs = 0U;
     s_serialMs = 0U;
     s_lastJoystickAckMs = 0U;
     s_joystickAcked = 0U;
@@ -1046,6 +1049,33 @@ static void ESerial_SendBoardTestTelemetry(void)
 }
 #endif
 
+#if !ECAR_BOARD_TEST_MODE
+static void ESerial_SendLineTelem(void)
+{
+    Serial_Printf("[line,%u,%02X,%u,%u,%d,",
+                  (unsigned int)ECar_GetState(),
+                  (unsigned int)g_lineMask,
+                  (unsigned int)g_lineBlackCount,
+                  (unsigned int)g_lineValid,
+                  (int)g_lineError);
+
+    ESerial_SendFixedValue(g_targetForwardSpeed, 1U);
+    Serial_SendString(",");
+    ESerial_SendFixedValue(g_targetTurnSpeed, 1U);
+    Serial_SendString(",");
+    ESerial_SendFixedValue(g_leftSpeed, 1U);
+    Serial_SendString(",");
+    ESerial_SendFixedValue(g_rightSpeed, 1U);
+
+    Serial_Printf(",%d,%d,%u,%u,%u]\r\n",
+                  (int)g_leftPwm,
+                  (int)g_rightPwm,
+                  (unsigned int)ECar_GetCornerCount(),
+                  (unsigned int)ECar_GetLapCount(),
+                  (unsigned int)ECar_GetFaultCode());
+}
+#endif
+
 static void ESerial_PeriodicTelemetry(uint16_t periodMs)
 {
     if (!s_serialReady)
@@ -1056,16 +1086,24 @@ static void ESerial_PeriodicTelemetry(uint16_t periodMs)
     /* periodMs 由调用者传入，因此该函数也能用于 10ms 任务累计。 */
     s_serialMs += periodMs;
     s_plotMs += periodMs;
-    if (s_plotMs < E_SERIAL_PLOT_PERIOD_MS)
+    s_lineTelemMs += periodMs;
+
+    if (s_plotMs >= E_SERIAL_PLOT_PERIOD_MS)
     {
-        return;
+        s_plotMs = 0U;
+#if ECAR_BOARD_TEST_MODE
+        ESerial_SendBoardTestTelemetry();
+#else
+        ESerial_SendRunPlot();
+#endif
     }
 
-    s_plotMs = 0U;
-#if ECAR_BOARD_TEST_MODE
-    ESerial_SendBoardTestTelemetry();
-#else
-    ESerial_SendRunPlot();
+#if !ECAR_BOARD_TEST_MODE
+    if (s_lineTelemMs >= E_SERIAL_LINE_PERIOD_MS)
+    {
+        s_lineTelemMs = 0U;
+        ESerial_SendLineTelem();
+    }
 #endif
 }
 
