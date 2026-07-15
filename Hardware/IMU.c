@@ -28,6 +28,10 @@
 
 #define IMU_SOFT_RETRY_COUNT        3U
 
+#ifndef IMU_DISABLE_HW_I2C_CONTROLLER
+#define IMU_DISABLE_HW_I2C_CONTROLLER 0U
+#endif
+
 #define IMU_SDA_PORT    GPIO_I2C_SHARED_SDA_PORT
 #define IMU_SDA_PIN     GPIO_I2C_SHARED_SDA_PIN
 #define IMU_SDA_IOMUX   GPIO_I2C_SHARED_IOMUX_SDA
@@ -60,7 +64,9 @@ static void IMU_SDA_OUT(void)
 
 static void IMU_SDA_IN(void)
 {
-    DL_GPIO_initDigitalInput(IMU_SDA_IOMUX);
+    DL_GPIO_initDigitalInputFeatures(IMU_SDA_IOMUX,
+        DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
+        DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 }
 
 static void IMU_SDA_SET(uint8_t level)
@@ -82,7 +88,9 @@ static void IMU_SCL_SET(uint8_t level)
 
 static void IMU_SoftI2CInit(void)
 {
+#if IMU_DISABLE_HW_I2C_CONTROLLER
     DL_I2C_disableController(I2C_SHARED_INST);
+#endif
 
     DL_GPIO_initDigitalOutput(IMU_SCL_IOMUX);
     DL_GPIO_setPins(IMU_SCL_PORT, IMU_SCL_PIN);
