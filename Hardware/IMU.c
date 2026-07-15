@@ -1,8 +1,6 @@
 #include "IMU.h"
 #include "Board_Config.h"
 
-#define MPU6050_WHO_AM_I_VAL     0x68U
-
 #define MPU6050_REG_WHO_AM_I     0x75U
 #define MPU6050_REG_PWR_MGMT_1   0x6BU
 #define MPU6050_REG_SMPLRT_DIV   0x19U
@@ -240,6 +238,11 @@ void IMU_Init(void)
             s_lastErrorStage = IMU_ERROR_WHO_MISMATCH;
             return;
         }
+    }
+    else
+    {
+        s_mpuAddr = 0x68U;
+        s_mpuAddrValid = 1U;
     }
 
     if (!IMU_WriteReg(MPU6050_REG_PWR_MGMT_1, 0x00U))

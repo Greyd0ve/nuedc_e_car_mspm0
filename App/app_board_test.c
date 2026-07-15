@@ -157,10 +157,8 @@ static void BoardTest_PrintIMU(void)
 #if ECAR_TEST_IMU_ENABLE
     uint8_t who = 0U;
     uint8_t addr;
-    uint8_t addrValid;
 
     addr = IMU_GetAddr();
-    addrValid = IMU_IsAddrValid();
 
     if (!IMU_ReadWhoAmI(&who))
     {
@@ -172,15 +170,23 @@ static void BoardTest_PrintIMU(void)
         {
             Serial_Printf("[imu-scan] found 0x%02X\r\n", (unsigned int)foundAddr);
         }
-        else if (!addrValid)
-        {
-            Serial_Printf("[imu] fail scan=none status=0x%08lX stage=%u\r\n",
-                          (unsigned long)status, (unsigned int)stage);
-        }
         else
         {
-            Serial_Printf("[imu] fail addr=0x%02X status=0x%08lX stage=%u\r\n",
-                          (unsigned int)addr, (unsigned long)status, (unsigned int)stage);
+            uint8_t addrValid;
+
+            addr = IMU_GetAddr();
+            addrValid = IMU_IsAddrValid();
+
+            if (!addrValid)
+            {
+                Serial_Printf("[imu] fail scan=none status=0x%08lX stage=%u\r\n",
+                              (unsigned long)status, (unsigned int)stage);
+            }
+            else
+            {
+                Serial_Printf("[imu] fail addr=0x%02X status=0x%08lX stage=%u\r\n",
+                              (unsigned int)addr, (unsigned long)status, (unsigned int)stage);
+            }
         }
         return;
     }
