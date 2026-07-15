@@ -62,7 +62,7 @@ ECarParam_t g_eCarParam =
 		0.020f,
 		ECAR_DEFAULT_TURN_LIMIT_CMPS,
 
-    250U,
+    50U,
     120U,
     220U,
     1800U,
