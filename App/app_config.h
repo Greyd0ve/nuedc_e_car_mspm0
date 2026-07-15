@@ -8,7 +8,9 @@
 #define ECAR_ENCODER_MINIMAL_DEBUG              0
 #endif
 
-/* Safety switches. Keep remote start disabled unless deliberately enabled. */
+/* Safety switches. Keep remote start disabled unless deliberately enabled.
+ * For IMU-only board tests, set ECAR_TEST_MOTOR_ENABLE = 0 to prevent
+ * unexpected motor output during gyro calibration and yaw testing. */
 #ifndef ECAR_ENABLE_REMOTE_START
 #define ECAR_ENABLE_REMOTE_START                0
 #endif

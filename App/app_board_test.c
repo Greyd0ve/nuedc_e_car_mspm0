@@ -163,6 +163,12 @@ static void BoardTest_PrintIMU(void)
         return;
     }
 
+    if (!IMU_IsReady())
+    {
+        Serial_Printf("[imu] not_ready who=0x%02X healthy=0\r\n", (unsigned int)who);
+        return;
+    }
+
     {
         int16_t gzRaw = 0;
         int16_t gzDps_x10 = 0;
