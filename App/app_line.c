@@ -56,7 +56,6 @@ static uint8_t App_Line_IsContinuousMask(uint8_t mask, uint8_t blackCount)
         return 0U;
     }
 
-    /* 正常黑线应形成连续传感器区域，分裂成多个区域时按异常 mask 处理。 */
     while (first < GRAYSCALE_CHANNELS && (mask & (uint8_t)(1U << first)) == 0U)
     {
         first++;
@@ -71,6 +70,23 @@ static uint8_t App_Line_IsContinuousMask(uint8_t mask, uint8_t blackCount)
     expected = (uint16_t)(expected << first);
 
     return (uint8_t)(((uint16_t)mask == expected) ? 1U : 0U);
+}
+
+static uint8_t App_Line_FillOneBitGap(uint8_t mask)
+{
+    uint8_t i;
+
+    for (i = 1U; i < 7U; i++)
+    {
+        if (((mask & (uint8_t)(1U << i)) == 0U) &&
+            ((mask & (uint8_t)(1U << (i - 1U))) != 0U) &&
+            ((mask & (uint8_t)(1U << (i + 1U))) != 0U))
+        {
+            mask |= (uint8_t)(1U << i);
+        }
+    }
+
+    return mask;
 }
 
 static void App_Line_HoldLastError(void)
@@ -152,6 +168,43 @@ void App_Line_Update(void)
     g_lineMask = mask;
     g_lineBlackCount = (uint8_t)count;
     continuous = App_Line_IsContinuousMask(mask, (uint8_t)count);
+
+    if (count > 0 && (uint8_t)count < cornerBlackCountTh && !continuous)
+    {
+        uint8_t correctedMask;
+
+        correctedMask = App_Line_FillOneBitGap(mask);
+        if (correctedMask != mask)
+        {
+            uint8_t j;
+            uint8_t correctedCount;
+            int32_t correctedSum;
+
+            correctedCount = 0U;
+            correctedSum = 0;
+            for (j = 0; j < GRAYSCALE_CHANNELS; j++)
+            {
+                if (correctedMask & (uint8_t)(1U << j))
+                {
+                    correctedCount++;
+                    correctedSum += weight[j];
+                }
+            }
+
+            if (correctedCount < cornerBlackCountTh)
+            {
+                if (App_Line_IsContinuousMask(correctedMask, correctedCount))
+                {
+                    mask = correctedMask;
+                    count = (int16_t)correctedCount;
+                    sum = correctedSum;
+                    g_lineMask = correctedMask;
+                    g_lineBlackCount = correctedCount;
+                    continuous = 1U;
+                }
+            }
+        }
+    }
 
     if (count == 0)
     {
