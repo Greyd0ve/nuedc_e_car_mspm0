@@ -460,6 +460,19 @@ static uint8_t ECar_IsCornerExitDirectionOk(void)
     }
 }
 
+static uint8_t ECar_IsCornerExitErrorOk(void)
+{
+    int16_t err;
+
+    err = g_lineError;
+    if (err < 0)
+    {
+        err = (int16_t)(-err);
+    }
+
+    return (err <= 220) ? 1U : 0U;
+}
+
 static void ECar_EnterFault(uint8_t faultCode)
 {
     /* 进入故障状态时先停车，再记录故障码并提示。 */
@@ -631,7 +644,7 @@ static void ECar_HandleCornerTurn(void)
     if (s_stateMs >= g_eCarParam.corner_min_turn_ms
         && turnDelta >= (int32_t)g_eCarParam.corner_center_min_turn_pulse
         && ECar_IsStableLineAfterCorner()
-        && ECar_IsCornerExitDirectionOk())
+        && ECar_IsCornerExitErrorOk())
     {
         if (s_cornerCenterLineCount < 255U)
         {
