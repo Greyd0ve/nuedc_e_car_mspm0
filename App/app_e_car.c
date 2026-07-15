@@ -38,6 +38,8 @@
 #define ECAR_CORNER_CENTER_CONFIRM_COUNT    3U
 #define ECAR_CORNER_ANY_LINE_MIN_TURN_PULSE     80
 #define ECAR_CORNER_ANY_LINE_CONFIRM_COUNT      3U
+#define ECAR_RECOVER_LOST_TIMEOUT_MS      2000U
+#define ECAR_RECOVER_TOTAL_TIMEOUT_MS     2600U
 
 
 ECarParam_t g_eCarParam =
@@ -603,11 +605,13 @@ static void ECar_HandleCornerTurn(void)
 
     {
         uint8_t lineCaught = 0U;
+        uint8_t confirmNeed = ECAR_CORNER_CENTER_CONFIRM_COUNT;
 
         if (turnDelta >= g_eCarParam.corner_center_min_turn_pulse &&
             ECar_IsCenterLineCaught())
         {
             lineCaught = 1U;
+            confirmNeed = ECAR_CORNER_CENTER_CONFIRM_COUNT;
         }
 
         if (!lineCaught &&
@@ -615,6 +619,7 @@ static void ECar_HandleCornerTurn(void)
             ECar_IsStableLineAfterCorner())
         {
             lineCaught = 1U;
+            confirmNeed = ECAR_CORNER_ANY_LINE_CONFIRM_COUNT;
         }
 
         if (lineCaught)
@@ -623,11 +628,12 @@ static void ECar_HandleCornerTurn(void)
             {
                 s_cornerCenterLineCount++;
             }
-            if (s_cornerCenterLineCount >= ECAR_CORNER_CENTER_CONFIRM_COUNT)
+            if (s_cornerCenterLineCount >= confirmNeed)
             {
                 App_Control_ResetPID();
                 s_lineDerivResetPending = 1U;
                 s_cornerCenterLineCount = 0U;
+                s_lostMs = 0U;
                 ECar_SetState(E_CAR_LINE_RUN);
                 return;
             }
@@ -662,9 +668,9 @@ static void ECar_HandleRecover(void)
 
     if (g_lineValid)
     {
-        /* 重新看到正常黑线后，用恢复速度闭环跟线。 */
         s_lostMs = 0U;
         turnCmd = ECar_CalcLineTurnCmd();
+        ECar_SetSpeedCmd(g_eCarParam.recover_speed, turnCmd);
     }
     else
     {
@@ -673,16 +679,15 @@ static void ECar_HandleRecover(void)
             s_lostMs += E_CAR_CONTROL_PERIOD_MS;
         }
 
-        if (s_lostMs >= 2000U)
+        if (s_lostMs >= ECAR_RECOVER_LOST_TIMEOUT_MS)
         {
             ECar_EnterFault(E_CAR_FAULT_RECOVER_TIMEOUT);
             return;
         }
 
         turnCmd = g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN;
+        ECar_SetSpeedCmd(0.0f, turnCmd);
     }
-
-    ECar_SetSpeedCmd(g_eCarParam.recover_speed, turnCmd);
 
     if (ECar_IsStableLineAfterCorner())
     {
@@ -702,9 +707,7 @@ static void ECar_HandleRecover(void)
         s_recoverStableMsCount = 0U;
     }
 
-    recoverTimeoutMs = (uint32_t)g_eCarParam.lost_timeout_ms +
-                       (uint32_t)g_eCarParam.recover_stable_ms + 500U;
-    /* 恢复阶段有独立超时，避免小车长时间原地找线。 */
+    recoverTimeoutMs = ECAR_RECOVER_TOTAL_TIMEOUT_MS;
     if (s_stateMs >= recoverTimeoutMs)
     {
         ECar_EnterFault(E_CAR_FAULT_RECOVER_TIMEOUT);
