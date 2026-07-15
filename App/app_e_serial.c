@@ -499,6 +499,21 @@ static uint8_t ESerial_SetNamedParam(const char *name, float value)
         return 1U;
     }
 
+    if (ESerial_StrEqualIgnoreCase(name, "corner_max_turn_ms") ||
+        ESerial_StrEqualIgnoreCase(name, "corner_max_turn") ||
+        ESerial_StrEqualIgnoreCase(name, "corner_turn_max_ms") ||
+        ESerial_StrEqualIgnoreCase(name, "corner_force_exit_ms"))
+    {
+        if (!ESerial_ValueInRange(value, 100.0f, 2000.0f))
+        {
+            ESerial_SendRangeError(name);
+            return 0U;
+        }
+        g_eCarParam.corner_max_turn_ms = (uint16_t)ESerial_RoundToInt(value);
+        ESerial_SendSetOkInt(name, (int32_t)g_eCarParam.corner_max_turn_ms);
+        return 1U;
+    }
+
     ESerial_SendUnknownError(name);
     return 0U;
 }
@@ -724,7 +739,7 @@ static void ESerial_SendParamSnapshot(void)
     ESerial_SendFixedValue(g_eCarParam.line_kd, 2U);
     Serial_SendString(",turnLimit,");
     ESerial_SendFixedValue(g_eCarParam.turn_limit, 0U);
-    Serial_Printf(",lapPulse,%ld,cornerPulse,%u,centerMinPulse,%u,pwmLimit,", (long)g_eCarParam.lap_pulse_default, (unsigned int)g_eCarParam.corner_turn_pulse, (unsigned int)g_eCarParam.corner_center_min_turn_pulse);
+    Serial_Printf(",lapPulse,%ld,cornerPulse,%u,centerMinPulse,%u,cornerMaxMs,%u,pwmLimit,", (long)g_eCarParam.lap_pulse_default, (unsigned int)g_eCarParam.corner_turn_pulse, (unsigned int)g_eCarParam.corner_center_min_turn_pulse, (unsigned int)g_eCarParam.corner_max_turn_ms);
     ESerial_SendFixedValue(g_pwmLimit, 0U);
     Serial_SendString("]\r\n");
 }

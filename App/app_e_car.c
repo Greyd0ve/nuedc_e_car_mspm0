@@ -65,7 +65,7 @@ ECarParam_t g_eCarParam =
     50U,
     120U,
     110U,
-    1800U,
+    400U,
 
     ECAR_DEFAULT_MIN_CORNER_INTERVAL_PULSE,
     ECAR_DEFAULT_LAP_PULSE,
@@ -448,18 +448,6 @@ static uint8_t ECar_IsStableLineAfterCorner(void)
     return 1U;
 }
 
-static uint8_t ECar_IsCornerExitDirectionOk(void)
-{
-    if (E_CAR_TURN_SIGN > 0.0f)
-    {
-        return (g_lineError >= 0) ? 1U : 0U;
-    }
-    else
-    {
-        return (g_lineError <= 0) ? 1U : 0U;
-    }
-}
-
 static uint8_t ECar_IsCornerExitErrorOk(void)
 {
     int16_t err;
@@ -668,7 +656,12 @@ static void ECar_HandleCornerTurn(void)
 
     if (s_stateMs >= g_eCarParam.corner_max_turn_ms)
     {
-        ECar_EnterRecover();
+        App_Control_ResetPID();
+        s_lineDerivResetPending = 1U;
+        s_cornerCenterLineCount = 0U;
+        s_lostMs = 0U;
+        s_recoverStableMsCount = 0U;
+        ECar_SetState(E_CAR_LINE_RUN);
         return;
     }
 }
