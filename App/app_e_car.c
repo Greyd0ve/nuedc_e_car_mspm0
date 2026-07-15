@@ -36,7 +36,6 @@
 #define ECAR_CORNER_CENTER_MASK              0x7EU
 #define ECAR_CORNER_CENTER_MIN_BLACK_COUNT    2U
 #define ECAR_CORNER_CENTER_CONFIRM_COUNT    3U
-#define ECAR_CORNER_CENTER_MIN_TURN_PULSE   40
 
 
 ECarParam_t g_eCarParam =
@@ -60,8 +59,8 @@ ECarParam_t g_eCarParam =
     ECAR_DEFAULT_LAP_PULSE,
 
     5U,
-    180U,
-    60U
+    160U,
+    40U
 };
 
 volatile float g_forwardKp = 2.0f;

@@ -721,7 +721,7 @@ static void ESerial_SendParamSnapshot(void)
     ESerial_SendFixedValue(g_eCarParam.line_kd, 2U);
     Serial_SendString(",turnLimit,");
     ESerial_SendFixedValue(g_eCarParam.turn_limit, 0U);
-    Serial_Printf(",lapPulse,%ld,pwmLimit,", (long)g_eCarParam.lap_pulse_default);
+    Serial_Printf(",lapPulse,%ld,cornerPulse,%u,centerMinPulse,%u,pwmLimit,", (long)g_eCarParam.lap_pulse_default, (unsigned int)g_eCarParam.corner_turn_pulse, (unsigned int)g_eCarParam.corner_center_min_turn_pulse);
     ESerial_SendFixedValue(g_pwmLimit, 0U);
     Serial_SendString("]\r\n");
 }
