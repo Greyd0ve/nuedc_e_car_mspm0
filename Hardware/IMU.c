@@ -26,6 +26,8 @@
 #define IMU_ERROR_WRITE_CONF_FAIL   10U
 #define IMU_ERROR_WRITE_GYRO_FAIL   11U
 
+#define IMU_SOFT_RETRY_COUNT        3U
+
 #define IMU_SDA_PORT    GPIO_I2C_SHARED_SDA_PORT
 #define IMU_SDA_PIN     GPIO_I2C_SHARED_SDA_PIN
 #define IMU_SDA_IOMUX   GPIO_I2C_SHARED_IOMUX_SDA
@@ -41,6 +43,7 @@ static uint8_t  s_yawValid       = 0U;
 static uint8_t  s_mpuAddr        = 0x68U;
 static uint8_t  s_mpuAddrValid   = 0U;
 static uint8_t  s_lastErrorStage = IMU_ERROR_NONE;
+static uint8_t  s_initErrorStage = IMU_ERROR_NONE;
 static uint32_t s_lastI2CStatus  = 0U;
 
 static void IMU_IIC_DelayUs(uint32_t us)
@@ -86,6 +89,38 @@ static void IMU_SoftI2CInit(void)
     DL_GPIO_initDigitalOutput(IMU_SDA_IOMUX);
     DL_GPIO_setPins(IMU_SDA_PORT, IMU_SDA_PIN);
     DL_GPIO_enableOutput(IMU_SDA_PORT, IMU_SDA_PIN);
+}
+
+static void IMU_IIC_BusRecover(void)
+{
+    uint8_t i;
+
+    IMU_SDA_OUT();
+    IMU_SCL_SET(1);
+    IMU_SDA_SET(1);
+    IMU_IIC_DelayUs(20);
+
+    IMU_SDA_IN();
+    if (IMU_SDA_GET() == 0U)
+    {
+        IMU_SDA_OUT();
+        for (i = 0U; i < 9U; i++)
+        {
+            IMU_SCL_SET(0);
+            IMU_IIC_DelayUs(10);
+            IMU_SCL_SET(1);
+            IMU_IIC_DelayUs(10);
+        }
+    }
+
+    IMU_SDA_OUT();
+    IMU_SCL_SET(0);
+    IMU_SDA_SET(0);
+    IMU_SCL_SET(1);
+    IMU_IIC_DelayUs(5);
+    IMU_SDA_SET(1);
+    IMU_IIC_DelayUs(5);
+    IMU_IIC_DelayUs(20);
 }
 
 static void IMU_IIC_Start(void)
@@ -188,68 +223,84 @@ static uint8_t IMU_IIC_ReadByte(void)
         IMU_SCL_SET(1);
         IMU_IIC_DelayUs(5);
         receive <<= 1U;
-        if (IMU_SDA_GET())
-        {
-            receive |= 1U;
-        }
+        if (IMU_SDA_GET()) { receive |= 1U; }
     }
     IMU_SCL_SET(0);
     return receive;
 }
 
-static uint8_t IMU_SoftWriteReg(uint8_t addr, uint8_t reg, uint8_t value)
+static uint8_t IMU_SoftWriteRegRetry(uint8_t addr, uint8_t reg, uint8_t value, uint8_t retryCount)
 {
-    IMU_IIC_Start();
-    IMU_IIC_SendByte((uint8_t)((addr << 1U) | 0U));
-    if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_ADDR_WRITE_NACK; return 0U; }
-    IMU_IIC_SendByte(reg);
-    if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_REG_NACK; return 0U; }
-    IMU_IIC_SendByte(value);
-    if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_WRITE_REG; return 0U; }
-    IMU_IIC_Stop();
-    return 1U;
+    uint8_t attempt;
+
+    for (attempt = 0U; attempt < retryCount; attempt++)
+    {
+        IMU_IIC_BusRecover();
+        IMU_IIC_Start();
+        IMU_IIC_SendByte((uint8_t)((addr << 1U) | 0U));
+        if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_ADDR_WRITE_NACK; continue; }
+        IMU_IIC_SendByte(reg);
+        if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_REG_NACK; continue; }
+        IMU_IIC_SendByte(value);
+        if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_WRITE_REG; continue; }
+        IMU_IIC_Stop();
+        s_lastErrorStage = IMU_ERROR_NONE;
+        return 1U;
+    }
+
+    return 0U;
 }
 
-static uint8_t IMU_SoftReadRegs(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len)
+static uint8_t IMU_SoftWriteReg(uint8_t addr, uint8_t reg, uint8_t value)
+{
+    return IMU_SoftWriteRegRetry(addr, reg, value, IMU_SOFT_RETRY_COUNT);
+}
+
+static uint8_t IMU_SoftReadRegsRetry(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len, uint8_t retryCount)
 {
     uint8_t i;
+    uint8_t attempt;
 
     if (data == 0 || len == 0U) { return 0U; }
 
-    IMU_IIC_Start();
-    IMU_IIC_SendByte((uint8_t)((addr << 1U) | 0U));
-    if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_ADDR_WRITE_NACK; return 0U; }
-    IMU_IIC_SendByte(reg);
-    if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_REG_NACK; return 0U; }
-
-    IMU_IIC_Start();
-    IMU_IIC_SendByte((uint8_t)((addr << 1U) | 1U));
-    if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_ADDR_READ_NACK; return 0U; }
-
-    for (i = 0; i < len; i++)
+    for (attempt = 0U; attempt < retryCount; attempt++)
     {
-        data[i] = IMU_IIC_ReadByte();
-        IMU_IIC_SendAck((uint8_t)((i == (uint8_t)(len - 1U)) ? 1U : 0U));
+        IMU_IIC_BusRecover();
+        IMU_IIC_Start();
+        IMU_IIC_SendByte((uint8_t)((addr << 1U) | 0U));
+        if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_ADDR_WRITE_NACK; continue; }
+        IMU_IIC_SendByte(reg);
+        if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_REG_NACK; continue; }
+
+        IMU_IIC_Start();
+        IMU_IIC_SendByte((uint8_t)((addr << 1U) | 1U));
+        if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); s_lastErrorStage = IMU_ERROR_ADDR_READ_NACK; continue; }
+
+        for (i = 0; i < len; i++)
+        {
+            data[i] = IMU_IIC_ReadByte();
+            IMU_IIC_SendAck((uint8_t)((i == (uint8_t)(len - 1U)) ? 1U : 0U));
+        }
+
+        IMU_IIC_Stop();
+        s_lastErrorStage = IMU_ERROR_NONE;
+        return 1U;
     }
 
-    IMU_IIC_Stop();
-    return 1U;
+    return 0U;
 }
 
-static uint8_t IMU_SoftReadReg(uint8_t addr, uint8_t reg, uint8_t *value)
+static uint8_t IMU_SoftReadRegRetry(uint8_t addr, uint8_t reg, uint8_t *value, uint8_t retryCount)
 {
-    return IMU_SoftReadRegs(addr, reg, value, 1U);
+    return IMU_SoftReadRegsRetry(addr, reg, value, 1U, retryCount);
 }
 
 uint8_t IMU_ProbeAddressAck(uint8_t addr)
 {
+    IMU_IIC_BusRecover();
     IMU_IIC_Start();
     IMU_IIC_SendByte((uint8_t)((addr << 1U) | 0U));
-    if (!IMU_IIC_WaitAck())
-    {
-        IMU_IIC_Stop();
-        return 0U;
-    }
+    if (!IMU_IIC_WaitAck()) { IMU_IIC_Stop(); return 0U; }
     IMU_IIC_Stop();
     return 1U;
 }
@@ -261,7 +312,7 @@ uint8_t IMU_ReadWhoAmI(uint8_t *whoAmI)
     if (whoAmI == 0) { return 0U; }
     *whoAmI = 0U;
 
-    if (!IMU_SoftReadReg(s_mpuAddr, MPU6050_REG_WHO_AM_I, &data))
+    if (!IMU_SoftReadRegRetry(s_mpuAddr, MPU6050_REG_WHO_AM_I, &data, IMU_SOFT_RETRY_COUNT))
     {
         return 0U;
     }
@@ -297,21 +348,8 @@ uint8_t IMU_Scan(uint8_t *foundAddr)
     *foundAddr = 0U;
     s_mpuAddrValid = 0U;
 
-    if (IMU_ProbeAddress(0x68U))
-    {
-        *foundAddr = 0x68U;
-        s_mpuAddr = 0x68U;
-        s_mpuAddrValid = 1U;
-        return 1U;
-    }
-
-    if (IMU_ProbeAddress(0x69U))
-    {
-        *foundAddr = 0x69U;
-        s_mpuAddr = 0x69U;
-        s_mpuAddrValid = 1U;
-        return 1U;
-    }
+    if (IMU_ProbeAddress(0x68U)) { *foundAddr = 0x68U; s_mpuAddr = 0x68U; s_mpuAddrValid = 1U; return 1U; }
+    if (IMU_ProbeAddress(0x69U)) { *foundAddr = 0x69U; s_mpuAddr = 0x69U; s_mpuAddrValid = 1U; return 1U; }
 
     return 0U;
 }
@@ -331,14 +369,16 @@ void IMU_Init(void)
     s_mpuAddr = 0x68U;
     s_mpuAddrValid = 0U;
     s_lastErrorStage = IMU_ERROR_NONE;
+    s_initErrorStage = IMU_ERROR_NONE;
     s_lastI2CStatus = 0U;
 
     if (!IMU_ReadWhoAmI(&who) || who != MPU6050_WHO_AM_I_VAL)
     {
-        if (!IMU_Scan(&foundAddr)) { return; }
+        if (!IMU_Scan(&foundAddr)) { s_initErrorStage = IMU_ERROR_ADDR_WRITE_NACK; return; }
         if (!IMU_ReadWhoAmI(&who) || who != MPU6050_WHO_AM_I_VAL)
         {
             s_lastErrorStage = IMU_ERROR_WHO_MISMATCH;
+            s_initErrorStage = IMU_ERROR_WHO_MISMATCH;
             return;
         }
     }
@@ -346,21 +386,46 @@ void IMU_Init(void)
     {
         s_mpuAddr = 0x68U;
         s_mpuAddrValid = 1U;
+        s_lastErrorStage = IMU_ERROR_NONE;
     }
 
-    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_PWR_MGMT_1, 0x00U)) { s_lastErrorStage = IMU_ERROR_WRITE_PWR_FAIL; return; }
+    if (!IMU_SoftWriteRegRetry(s_mpuAddr, MPU6050_REG_PWR_MGMT_1, 0x00U, IMU_SOFT_RETRY_COUNT))
+    {
+        s_lastErrorStage = IMU_ERROR_WRITE_PWR_FAIL;
+        s_initErrorStage = IMU_ERROR_WRITE_PWR_FAIL;
+        return;
+    }
 
     {
         uint32_t delay = 200000U;
         while (delay > 0U) { delay--; }
     }
 
-    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_SMPLRT_DIV, 0x00U)) { s_lastErrorStage = IMU_ERROR_WRITE_SMPR_FAIL; return; }
-    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_CONFIG, MPU6050_DLPF_CFG)) { s_lastErrorStage = IMU_ERROR_WRITE_CONF_FAIL; return; }
-    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_GYRO_CONFIG, (MPU6050_GYRO_FS_SEL << 3U))) { s_lastErrorStage = IMU_ERROR_WRITE_GYRO_FAIL; return; }
+    if (!IMU_SoftWriteRegRetry(s_mpuAddr, MPU6050_REG_SMPLRT_DIV, 0x00U, IMU_SOFT_RETRY_COUNT))
+    {
+        s_lastErrorStage = IMU_ERROR_WRITE_SMPR_FAIL;
+        s_initErrorStage = IMU_ERROR_WRITE_SMPR_FAIL;
+        return;
+    }
+
+    if (!IMU_SoftWriteRegRetry(s_mpuAddr, MPU6050_REG_CONFIG, MPU6050_DLPF_CFG, IMU_SOFT_RETRY_COUNT))
+    {
+        s_lastErrorStage = IMU_ERROR_WRITE_CONF_FAIL;
+        s_initErrorStage = IMU_ERROR_WRITE_CONF_FAIL;
+        return;
+    }
+
+    if (!IMU_SoftWriteRegRetry(s_mpuAddr, MPU6050_REG_GYRO_CONFIG, (MPU6050_GYRO_FS_SEL << 3U), IMU_SOFT_RETRY_COUNT))
+    {
+        s_lastErrorStage = IMU_ERROR_WRITE_GYRO_FAIL;
+        s_initErrorStage = IMU_ERROR_WRITE_GYRO_FAIL;
+        return;
+    }
 
     s_imuReady = 1U;
     s_imuHealthy = 1U;
+    s_lastErrorStage = IMU_ERROR_NONE;
+    s_initErrorStage = IMU_ERROR_NONE;
 }
 
 uint8_t IMU_ReadGyroRaw(int16_t *gx, int16_t *gy, int16_t *gz)
@@ -370,7 +435,7 @@ uint8_t IMU_ReadGyroRaw(int16_t *gx, int16_t *gy, int16_t *gz)
     if (gx == 0 || gy == 0 || gz == 0) { return 0U; }
     if (!s_imuReady) { return 0U; }
 
-    if (!IMU_SoftReadRegs(s_mpuAddr, MPU6050_REG_GYRO_XOUT_H, buf, 6U))
+    if (!IMU_SoftReadRegsRetry(s_mpuAddr, MPU6050_REG_GYRO_XOUT_H, buf, 6U, IMU_SOFT_RETRY_COUNT))
     {
         s_imuHealthy = 0U;
         return 0U;
@@ -381,6 +446,7 @@ uint8_t IMU_ReadGyroRaw(int16_t *gx, int16_t *gy, int16_t *gz)
     *gz = (int16_t)(((uint16_t)buf[4] << 8U) | (uint16_t)buf[5]);
 
     s_imuHealthy = 1U;
+    s_lastErrorStage = IMU_ERROR_NONE;
     return 1U;
 }
 
@@ -392,50 +458,20 @@ void IMU_CalibrateGyroZ(uint16_t samples)
     int16_t gz;
 
     if (samples == 0U) { samples = 200U; }
-
     for (i = 0; i < samples; i++)
     {
         int16_t dummyX, dummyY;
-        if (IMU_ReadGyroRaw(&dummyX, &dummyY, &gz))
-        {
-            sum += (int32_t)gz;
-            validCount++;
-        }
+        if (IMU_ReadGyroRaw(&dummyX, &dummyY, &gz)) { sum += (int32_t)gz; validCount++; }
     }
 
-    if (validCount > 0U)
-    {
-        s_gyroZOffset = (int16_t)(sum / (int32_t)validCount);
-    }
-    else
-    {
-        s_gyroZOffset = 0;
-    }
+    if (validCount > 0U) { s_gyroZOffset = (int16_t)(sum / (int32_t)validCount); }
+    else                 { s_gyroZOffset = 0; }
 
     s_yawDeg_x10 = 0;
     s_yawValid = 1U;
 }
 
-void IMU_ResetYaw(void)
-{
-    s_yawDeg_x10 = 0;
-    s_yawValid = 1U;
-}
-
-void IMU_UpdateYaw(uint16_t dt_ms)
-{
-    int16_t gzRaw;
-    int16_t dummyX, dummyY;
-    int32_t dps_x100;
-
-    if (!s_yawValid || !s_imuReady) { return; }
-
-    if (!IMU_ReadGyroRaw(&dummyX, &dummyY, &gzRaw)) { return; }
-
-    dps_x100 = (int32_t)(gzRaw - s_gyroZOffset) * 25000L / 32768L;
-    s_yawDeg_x10 += (dps_x100 * (int32_t)dt_ms) / 10000L;
-}
-
+void IMU_ResetYaw(void)     { s_yawDeg_x10 = 0; s_yawValid = 1U; }
 int32_t IMU_GetYawDeg_x10(void)   { return s_yawDeg_x10; }
 uint8_t IMU_IsReady(void)         { return s_imuReady; }
 uint8_t IMU_IsHealthy(void)       { return s_imuHealthy; }
@@ -444,6 +480,7 @@ uint8_t IMU_IsAddrValid(void)     { return s_mpuAddrValid; }
 uint8_t IMU_GetRecoverCount(void) { return 0U; }
 uint32_t IMU_GetLastI2CStatus(void) { return s_lastI2CStatus; }
 uint8_t IMU_GetLastErrorStage(void) { return s_lastErrorStage; }
+uint8_t IMU_GetInitErrorStage(void) { return s_initErrorStage; }
 
 const char *IMU_GetErrorStageName(uint8_t stage)
 {
@@ -480,4 +517,17 @@ uint8_t IMU_GetGyroRawZ_x10(int16_t *rawZ_x10, int16_t *dps_x10)
     *rawZ_x10 = gzRaw;
     *dps_x10 = (int16_t)((int32_t)(gzRaw - s_gyroZOffset) * 2500L / 32768L);
     return 1U;
+}
+
+void IMU_UpdateYaw(uint16_t dt_ms)
+{
+    int16_t gzRaw;
+    int16_t dummyX, dummyY;
+    int32_t dps_x100;
+
+    if (!s_yawValid || !s_imuReady) { return; }
+    if (!IMU_ReadGyroRaw(&dummyX, &dummyY, &gzRaw)) { return; }
+
+    dps_x100 = (int32_t)(gzRaw - s_gyroZOffset) * 25000L / 32768L;
+    s_yawDeg_x10 += (dps_x100 * (int32_t)dt_ms) / 10000L;
 }

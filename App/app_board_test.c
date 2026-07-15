@@ -229,8 +229,10 @@ static void BoardTest_PrintIMU(void)
         {
             static uint8_t s_reinited = 0U;
 
-            Serial_Printf("[imu] not_ready who=0x%02X addr=0x%02X healthy=0 stage=%u name=%s\r\n",
+            Serial_Printf("[imu] not_ready who=0x%02X addr=0x%02X healthy=0 init_stage=%u init_name=%s last_stage=%u last_name=%s\r\n",
                           (unsigned int)who, (unsigned int)addr,
+                          (unsigned int)IMU_GetInitErrorStage(),
+                          IMU_GetErrorStageName(IMU_GetInitErrorStage()),
                           (unsigned int)stage, IMU_GetErrorStageName(stage));
 
             if (!s_reinited)
