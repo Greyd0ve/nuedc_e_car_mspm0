@@ -40,6 +40,12 @@
 #define ECAR_CORNER_LOOSE_CONFIRM_COUNT        2U
 #define ECAR_RECOVER_LOST_TIMEOUT_MS           2500U
 #define ECAR_RECOVER_TOTAL_TIMEOUT_MS          3000U
+#define ECAR_CORNER_ARC_MIN_FORWARD_PULSE      40
+#define ECAR_CORNER_ARC_MAX_FORWARD_PULSE      260
+#define ECAR_CORNER_ARC_CONFIRM_COUNT          2U
+#define ECAR_CORNER_ARC_TIMEOUT_MS             1400U
+#define ECAR_CORNER_ARC_NO_REVERSE_MARGIN      1.0f
+#define ECAR_CORNER_ARC_MIN_FORWARD_CMPS       8.0f
 
 
 ECarParam_t g_eCarParam =
@@ -137,6 +143,7 @@ static volatile uint8_t s_cornerCandidateCount = 0U;
 static volatile uint8_t s_cornerCenterLineCount = 0U;
 
 static volatile int32_t s_cornerTurnStartPulse = 0;
+static volatile int32_t s_cornerPassStartPulse = 0;
 
 
 static float s_lineDError = 0.0f;
@@ -302,6 +309,7 @@ static void ECar_ResetRunData(void)
     s_faultCode = E_CAR_FAULT_NONE;
     s_cornerCandidateCount = 0U;
     s_cornerCenterLineCount = 0U;
+    s_cornerPassStartPulse = 0;
 }
 
 static void ECar_UpdateLapProgress(void)
@@ -519,6 +527,7 @@ static void ECar_HandleCornerEnter(void)
     s_cornerCandidateCount = 0U;
     s_cornerCenterLineCount = 0U;
 		s_cornerTurnStartPulse = g_turnEncoderTotal;
+    s_cornerPassStartPulse = ECar_GetForwardPulse();
     if (s_cornerCount < 250U)
     {
         s_cornerCount++;
@@ -591,19 +600,31 @@ static uint8_t ECar_IsCenterLineCaught(void)
 
 static void ECar_HandleCornerTurn(void)
 {
-    int32_t turnPulse;
-    int32_t turnDelta;
+    int32_t forwardPulse;
+    int32_t forwardDelta;
+    float forwardCmd;
+    float turnCmd;
 
-    turnPulse = g_turnEncoderTotal - s_cornerTurnStartPulse;
-    turnDelta = (turnPulse >= 0) ? turnPulse : -turnPulse;
+    forwardPulse = ECar_GetForwardPulse();
+    forwardDelta = forwardPulse - s_cornerPassStartPulse;
+    if (forwardDelta < 0) { forwardDelta = -forwardDelta; }
 
-    /*
-     * 角点阶段优先原地转向，不再叠加 forward。
-     */
-    ECar_SetSpeedCmd(0.0f,
-                     g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN);
+    forwardCmd = g_eCarParam.corner_forward_speed;
+    if (forwardCmd < ECAR_CORNER_ARC_MIN_FORWARD_CMPS)
+    {
+        forwardCmd = ECAR_CORNER_ARC_MIN_FORWARD_CMPS;
+    }
 
-    if (turnDelta >= ECAR_CORNER_LOOSE_MIN_TURN_PULSE)
+    turnCmd = g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN;
+    {
+        float turnLimit = forwardCmd - ECAR_CORNER_ARC_NO_REVERSE_MARGIN;
+        if (turnLimit < 1.0f) { turnLimit = 1.0f; }
+        turnCmd = ECar_LimitFloat(turnCmd, -turnLimit, turnLimit);
+    }
+
+    ECar_SetSpeedCmd(forwardCmd, turnCmd);
+
+    if (forwardDelta >= ECAR_CORNER_ARC_MIN_FORWARD_PULSE)
     {
         if (ECar_IsStableLineAfterCorner())
         {
@@ -611,7 +632,7 @@ static void ECar_HandleCornerTurn(void)
             {
                 s_cornerCenterLineCount++;
             }
-            if (s_cornerCenterLineCount >= ECAR_CORNER_LOOSE_CONFIRM_COUNT)
+            if (s_cornerCenterLineCount >= ECAR_CORNER_ARC_CONFIRM_COUNT)
             {
                 App_Control_ResetPID();
                 s_lineDerivResetPending = 1U;
@@ -628,16 +649,13 @@ static void ECar_HandleCornerTurn(void)
         }
     }
 
-    if (turnDelta >= g_eCarParam.corner_turn_pulse)
+    if (forwardDelta >= ECAR_CORNER_ARC_MAX_FORWARD_PULSE)
     {
         ECar_EnterRecover();
         return;
     }
 
-    /*
-     * 时间只作为保护，避免编码器异常时一直转。
-     */
-    if (s_stateMs >= g_eCarParam.corner_max_turn_ms)
+    if (s_stateMs >= ECAR_CORNER_ARC_TIMEOUT_MS)
     {
         ECar_EnterRecover();
         return;
