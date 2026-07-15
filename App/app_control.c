@@ -55,7 +55,7 @@
 #define APP_SPEED_PI_KP          1.2f
 #define APP_SPEED_PI_KI          0.08f
 #define APP_SPEED_I_LIMIT        45.0f
-#define APP_WHEEL_TARGET_LIMIT   28.0f
+#define APP_WHEEL_TARGET_LIMIT   40.0f
 
 
 /*

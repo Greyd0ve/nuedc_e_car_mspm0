@@ -470,6 +470,32 @@ static uint8_t ESerial_SetNamedParam(const char *name, float value)
         return 1U;
     }
 
+    if (ESerial_StrEqualIgnoreCase(name, "corner_pulse") ||
+        ESerial_StrEqualIgnoreCase(name, "corner_turn_pulse"))
+    {
+        if (!ESerial_ValueInRange(value, 60.0f, 260.0f))
+        {
+            ESerial_SendRangeError(name);
+            return 0U;
+        }
+        g_eCarParam.corner_turn_pulse = (uint16_t)ESerial_RoundToInt(value);
+        ESerial_SendSetOkInt(name, (int32_t)g_eCarParam.corner_turn_pulse);
+        return 1U;
+    }
+
+    if (ESerial_StrEqualIgnoreCase(name, "center_min_pulse") ||
+        ESerial_StrEqualIgnoreCase(name, "corner_center_min_turn_pulse"))
+    {
+        if (!ESerial_ValueInRange(value, 0.0f, 150.0f))
+        {
+            ESerial_SendRangeError(name);
+            return 0U;
+        }
+        g_eCarParam.corner_center_min_turn_pulse = (uint16_t)ESerial_RoundToInt(value);
+        ESerial_SendSetOkInt(name, (int32_t)g_eCarParam.corner_center_min_turn_pulse);
+        return 1U;
+    }
+
     ESerial_SendUnknownError(name);
     return 0U;
 }

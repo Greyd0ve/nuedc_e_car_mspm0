@@ -36,7 +36,7 @@
 #define ECAR_CORNER_CENTER_MASK              0x7EU
 #define ECAR_CORNER_CENTER_MIN_BLACK_COUNT    2U
 #define ECAR_CORNER_CENTER_CONFIRM_COUNT    3U
-#define ECAR_CORNER_CENTER_MIN_TURN_PULSE   60
+#define ECAR_CORNER_CENTER_MIN_TURN_PULSE   40
 
 
 ECarParam_t g_eCarParam =
@@ -59,7 +59,9 @@ ECarParam_t g_eCarParam =
     ECAR_DEFAULT_MIN_CORNER_INTERVAL_PULSE,
     ECAR_DEFAULT_LAP_PULSE,
 
-    5U
+    5U,
+    180U,
+    60U
 };
 
 volatile float g_forwardKp = 2.0f;
@@ -389,32 +391,25 @@ static uint8_t ECar_IsCornerDetected(void)
 
     if (g_lineBlackCount < cornerBlackCountTh)
     {
-        /* 黑色通道数不足阈值时，不认为是角点，只可能是普通线或噪声。 */
-        s_cornerCandidateCount = 0U;
         return 0U;
     }
 
     if (g_lineCornerMaskStableCount < ECAR_CORNER_CONFIRM_COUNT)
     {
-        /* 依赖 app_line 的稳定计数过滤单次黑色毛刺。 */
         return 0U;
     }
 
     pulse = ECar_GetForwardPulse();
     interval = pulse - s_lastCornerForwardPulse;
-    if (interval < g_eCarParam.min_corner_interval_pulse)
+    if (s_cornerCount > 0U)
     {
-        /* 间隔不足只清本状态机候选计数，不破坏 app_line 的稳定计数。 */
-        s_cornerCandidateCount = 0U;
-        return 0U;
+        if (interval < g_eCarParam.min_corner_interval_pulse)
+        {
+            return 0U;
+        }
     }
 
-    if (s_cornerCandidateCount < 255U)
-    {
-        s_cornerCandidateCount++;
-    }
-
-    return (uint8_t)((s_cornerCandidateCount >= ECAR_CORNER_CONFIRM_COUNT) ? 1U : 0U);
+    return 1U;
 }
 
 static uint8_t ECar_IsStableLineAfterCorner(void)
@@ -605,7 +600,7 @@ static void ECar_HandleCornerTurn(void)
     ECar_SetSpeedCmd(0.0f,
                      g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN);
 
-    if (turnDelta >= ECAR_CORNER_CENTER_MIN_TURN_PULSE)
+    if (turnDelta >= g_eCarParam.corner_center_min_turn_pulse)
     {
         if (ECar_IsCenterLineCaught())
         {
@@ -628,7 +623,7 @@ static void ECar_HandleCornerTurn(void)
         }
     }
 
-    if (turnDelta >= ECAR_CORNER_TURN_PULSE_DEFAULT)
+    if (turnDelta >= g_eCarParam.corner_turn_pulse)
     {
         ECar_EnterRecover();
         return;

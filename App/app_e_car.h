@@ -48,6 +48,8 @@ typedef struct
 
     /* 判断宽黑色角点标记所需的最小黑色传感器数量。 */
     uint8_t corner_black_count_th;
+    uint16_t corner_turn_pulse;
+    uint16_t corner_center_min_turn_pulse;
 } ECarParam_t;
 
 extern ECarParam_t g_eCarParam;
