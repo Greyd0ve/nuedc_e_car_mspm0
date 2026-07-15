@@ -178,10 +178,12 @@ static void BoardTest_PrintIMU(void)
                 uint8_t retryWho = 0U;
                 if (IMU_ReadWhoAmI(&retryWho))
                 {
-                    Serial_Printf("[imu] retry who=0x%02X addr=0x%02X ready=%u healthy=%u\r\n",
+                    Serial_Printf("[imu] retry who=0x%02X addr=0x%02X ready=%u healthy=%u stage=%u name=%s\r\n",
                                   (unsigned int)retryWho, (unsigned int)foundAddr,
                                   (unsigned int)IMU_IsReady(),
-                                  (unsigned int)IMU_IsHealthy());
+                                  (unsigned int)IMU_IsHealthy(),
+                                  (unsigned int)IMU_GetLastErrorStage(),
+                                  IMU_GetErrorStageName(IMU_GetLastErrorStage()));
                 }
                 else
                 {
@@ -216,6 +218,8 @@ static void BoardTest_PrintIMU(void)
 
     if (!IMU_IsReady())
     {
+        uint8_t stage = IMU_GetLastErrorStage();
+
         if (who != MPU6050_WHO_AM_I_VAL)
         {
             Serial_Printf("[imu] who_mismatch who=0x%02X addr=0x%02X\r\n",
@@ -223,8 +227,29 @@ static void BoardTest_PrintIMU(void)
         }
         else
         {
-            Serial_Printf("[imu] not_ready who=0x%02X addr=0x%02X healthy=0\r\n",
-                          (unsigned int)who, (unsigned int)addr);
+            static uint8_t s_reinited = 0U;
+
+            Serial_Printf("[imu] not_ready who=0x%02X addr=0x%02X healthy=0 stage=%u name=%s\r\n",
+                          (unsigned int)who, (unsigned int)addr,
+                          (unsigned int)stage, IMU_GetErrorStageName(stage));
+
+            if (!s_reinited)
+            {
+                s_reinited = 1U;
+                IMU_Init();
+                if (IMU_IsReady())
+                {
+                    Serial_SendString("[imu] reinit_ok\r\n");
+                    IMU_CalibrateGyroZ(300);
+                    IMU_ResetYaw();
+                }
+                else
+                {
+                    uint8_t riStage = IMU_GetLastErrorStage();
+                    Serial_Printf("[imu] reinit_fail stage=%u name=%s\r\n",
+                                  (unsigned int)riStage, IMU_GetErrorStageName(riStage));
+                }
+            }
         }
         return;
     }
