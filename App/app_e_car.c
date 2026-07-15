@@ -440,12 +440,24 @@ static uint8_t ECar_IsStableLineAfterCorner(void)
     {
         return 0U;
     }
-    if (blackCount >= g_eCarParam.corner_black_count_th)
+    if (blackCount > g_eCarParam.corner_black_count_th)
     {
         return 0U;
     }
 
     return 1U;
+}
+
+static uint8_t ECar_IsCornerExitDirectionOk(void)
+{
+    if (E_CAR_TURN_SIGN > 0.0f)
+    {
+        return (g_lineError >= 0) ? 1U : 0U;
+    }
+    else
+    {
+        return (g_lineError <= 0) ? 1U : 0U;
+    }
 }
 
 static void ECar_EnterFault(uint8_t faultCode)
@@ -496,6 +508,23 @@ static void ECar_HandleLineRun(void)
 
         if (s_lostMs >= g_eCarParam.lost_timeout_ms)
         {
+            if (s_cornerCount > 0U)
+            {
+                int32_t interval;
+
+                interval = ECar_GetForwardPulse() - s_lastCornerForwardPulse;
+                if (interval < 0)
+                {
+                    interval = -interval;
+                }
+
+                if (interval < g_eCarParam.min_corner_interval_pulse)
+                {
+                    ECar_EnterRecover();
+                    return;
+                }
+            }
+
             ECar_SetState(E_CAR_CORNER_ENTER);
             return;
         }
@@ -601,7 +630,8 @@ static void ECar_HandleCornerTurn(void)
 
     if (s_stateMs >= g_eCarParam.corner_min_turn_ms
         && turnDelta >= (int32_t)g_eCarParam.corner_center_min_turn_pulse
-        && ECar_IsStableLineAfterCorner())
+        && ECar_IsStableLineAfterCorner()
+        && ECar_IsCornerExitDirectionOk())
     {
         if (s_cornerCenterLineCount < 255U)
         {
