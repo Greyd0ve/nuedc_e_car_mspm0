@@ -169,6 +169,9 @@ static void BoardTest_PrintIMU(void)
 
         Serial_Printf("[imu-ack] 68=%u 69=%u\r\n",
                       (unsigned int)ack68, (unsigned int)ack69);
+        Serial_Printf("[imu-bus] sda=%u scl=%u\r\n",
+                      (unsigned int)IMU_GetSdaLevel(),
+                      (unsigned int)IMU_GetSclLevel());
 
         if (IMU_Scan(&foundAddr))
         {
