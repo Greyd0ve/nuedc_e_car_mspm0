@@ -171,11 +171,25 @@ static void BoardTest_PrintOptionalStatus(void)
         uint8_t who = 0U;
         if (IMU_ReadWhoAmI(&who))
         {
-            Serial_Printf("[imu] ok who=0x%02X\r\n", (unsigned int)who);
+            int16_t gzRaw = 0;
+            int16_t gzDps_x10 = 0;
+            int32_t yaw_x10 = 0;
+            uint8_t healthy = IMU_IsHealthy();
+
+            if (IMU_GetGyroRawZ_x10(&gzRaw, &gzDps_x10))
+            {
+                yaw_x10 = IMU_GetYawDeg_x10();
+            }
+            Serial_Printf("[imu] ok who=0x%02X gz_raw=%d gz_dps=%d.%d yaw=%d.%d healthy=%u\r\n",
+                          (unsigned int)who,
+                          (int)gzRaw,
+                          (int)(gzDps_x10 / 10), (int)((gzDps_x10 < 0) ? (-gzDps_x10 % 10) : (gzDps_x10 % 10)),
+                          (int)(yaw_x10 / 10), (int)((yaw_x10 < 0) ? (-yaw_x10 % 10) : (yaw_x10 % 10)),
+                          (unsigned int)healthy);
         }
         else
         {
-            Serial_SendString("[imu] stub or fail\r\n");
+            Serial_SendString("[imu] fail\r\n");
         }
     }
 #else

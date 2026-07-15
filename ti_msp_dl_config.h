@@ -143,13 +143,13 @@ extern "C" {
 #define I2C_SHARED_INST_INT_IRQN                                   I2C0_INT_IRQn
 #define I2C_SHARED_BUS_SPEED_HZ                                           400000
 #define GPIO_I2C_SHARED_SDA_PORT                                           GPIOA
-#define GPIO_I2C_SHARED_SDA_PIN                                    DL_GPIO_PIN_0
-#define GPIO_I2C_SHARED_IOMUX_SDA                                 (IOMUX_PINCM1)
-#define GPIO_I2C_SHARED_IOMUX_SDA_FUNC                  IOMUX_PINCM1_PF_I2C0_SDA
+#define GPIO_I2C_SHARED_SDA_PIN                                   DL_GPIO_PIN_28
+#define GPIO_I2C_SHARED_IOMUX_SDA                                 (IOMUX_PINCM3)
+#define GPIO_I2C_SHARED_IOMUX_SDA_FUNC                  IOMUX_PINCM3_PF_I2C0_SDA
 #define GPIO_I2C_SHARED_SCL_PORT                                           GPIOA
-#define GPIO_I2C_SHARED_SCL_PIN                                    DL_GPIO_PIN_1
-#define GPIO_I2C_SHARED_IOMUX_SCL                                 (IOMUX_PINCM2)
-#define GPIO_I2C_SHARED_IOMUX_SCL_FUNC                  IOMUX_PINCM2_PF_I2C0_SCL
+#define GPIO_I2C_SHARED_SCL_PIN                                   DL_GPIO_PIN_31
+#define GPIO_I2C_SHARED_IOMUX_SCL                                 (IOMUX_PINCM6)
+#define GPIO_I2C_SHARED_IOMUX_SCL_FUNC                  IOMUX_PINCM6_PF_I2C0_SCL
 
 
 /* Defines for UART_DEBUG */

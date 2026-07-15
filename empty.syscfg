@@ -220,8 +220,8 @@ I2C1.basicEnableController     = true;
 I2C1.basicControllerBusSpeed   = 400000;
 I2C1.advAnalogGlitchFilter     = "DISABLED";
 I2C1.peripheral.$assign        = "I2C0";
-I2C1.peripheral.sclPin.$assign = "PA1";
-I2C1.peripheral.sdaPin.$assign = "PA0";
+I2C1.peripheral.sclPin.$assign = "PA31";
+I2C1.peripheral.sdaPin.$assign = "PA28";
 
 /* TX1/RX1 is UART_DEBUG in this board-test pass.
  * UART2/3 are reserved connectors and are not initialized here.

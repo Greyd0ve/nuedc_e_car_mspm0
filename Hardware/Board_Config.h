@@ -168,7 +168,8 @@
 
 /* ---------------- I2C0 shared bus ----------------
  * Use 3.3V power and pull SDA/SCL up to 3.3V.  Do not pull I2C to 5V.
- * PA1/PA0 remain available for MPU6050 or an external 4-pin IIC OLED.
+ * MPU6050 I2C0-SDA -> PA28
+ * MPU6050 I2C0-SCL -> PA31
  */
 #define I2C0_SCL_PORT                   GPIO_I2C0_SCL_PORT
 #define I2C0_SCL_PIN                    GPIO_I2C0_SCL_PIN
