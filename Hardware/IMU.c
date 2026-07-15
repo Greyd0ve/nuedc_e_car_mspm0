@@ -440,6 +440,22 @@ uint8_t IMU_GetRecoverCount(void) { return 0U; }
 uint32_t IMU_GetLastI2CStatus(void) { return s_lastI2CStatus; }
 uint8_t IMU_GetLastErrorStage(void) { return s_lastErrorStage; }
 
+const char *IMU_GetErrorStageName(uint8_t stage)
+{
+    switch (stage)
+    {
+        case IMU_ERROR_NONE:            return "none";
+        case IMU_ERROR_SOFT_START:      return "soft_start";
+        case IMU_ERROR_ADDR_WRITE_NACK: return "addr_write_nack";
+        case IMU_ERROR_REG_NACK:        return "reg_nack";
+        case IMU_ERROR_ADDR_READ_NACK:  return "addr_read_nack";
+        case IMU_ERROR_DATA_TIMEOUT:    return "data_timeout";
+        case IMU_ERROR_WHO_MISMATCH:    return "who_mismatch";
+        case IMU_ERROR_WRITE_REG:       return "write_reg_fail";
+        default:                        return "unknown";
+    }
+}
+
 uint8_t IMU_StatusHasIdle(uint32_t status)  { (void)status; return 1U; }
 uint8_t IMU_StatusHasBusy(uint32_t status)  { (void)status; return 0U; }
 uint8_t IMU_StatusHasError(uint32_t status) { (void)status; return 0U; }

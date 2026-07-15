@@ -162,25 +162,13 @@ static void BoardTest_PrintIMU(void)
 
     if (!IMU_ReadWhoAmI(&who))
     {
-        uint32_t status = IMU_GetLastI2CStatus();
         uint8_t stage = IMU_GetLastErrorStage();
         uint8_t ack68 = IMU_ProbeAddressAck(0x68U);
         uint8_t ack69 = IMU_ProbeAddressAck(0x69U);
         uint8_t foundAddr = 0U;
 
-        if (stage == 8U)
-        {
-            Serial_Printf("[imu-status] raw=0x%08lX idle=%u busy=%u error=%u recover=%u\r\n",
-                          (unsigned long)status,
-                          (unsigned int)IMU_StatusHasIdle(status),
-                          (unsigned int)IMU_StatusHasBusy(status),
-                          (unsigned int)IMU_StatusHasError(status),
-                          (unsigned int)IMU_GetRecoverCount());
-        }
-
-        Serial_Printf("[imu-ack] 68=%u 69=%u status=0x%08lX stage=%u\r\n",
-                      (unsigned int)ack68, (unsigned int)ack69,
-                      (unsigned long)status, (unsigned int)stage);
+        Serial_Printf("[imu-ack] 68=%u 69=%u\r\n",
+                      (unsigned int)ack68, (unsigned int)ack69);
 
         if (IMU_Scan(&foundAddr))
         {
@@ -195,13 +183,13 @@ static void BoardTest_PrintIMU(void)
 
             if (!addrValid)
             {
-                Serial_Printf("[imu] fail scan=none status=0x%08lX stage=%u\r\n",
-                              (unsigned long)status, (unsigned int)stage);
+                Serial_Printf("[imu] fail scan=none stage=%u name=%s\r\n",
+                              (unsigned int)stage, IMU_GetErrorStageName(stage));
             }
             else
             {
-                Serial_Printf("[imu] fail addr=0x%02X status=0x%08lX stage=%u\r\n",
-                              (unsigned int)addr, (unsigned long)status, (unsigned int)stage);
+                Serial_Printf("[imu] fail addr=0x%02X stage=%u name=%s\r\n",
+                              (unsigned int)addr, (unsigned int)stage, IMU_GetErrorStageName(stage));
             }
         }
         return;
