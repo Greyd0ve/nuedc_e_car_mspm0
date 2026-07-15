@@ -55,6 +55,7 @@ static int16_t  s_lastGyroYRaw   = 0;
 static int16_t  s_lastGyroZRaw   = 0;
 static int16_t  s_lastGyroZDps_x10 = 0;
 static int32_t  s_lastYawDelta_x10 = 0;
+static uint8_t  s_lastGyroBytes[6];
 
 static void IMU_IIC_DelayUs(uint32_t us)
 {
@@ -465,6 +466,9 @@ uint8_t IMU_ReadGyroRaw(int16_t *gx, int16_t *gy, int16_t *gz)
     s_lastGyroXRaw = *gx;
     s_lastGyroYRaw = *gy;
     s_lastGyroZRaw = *gz;
+    s_lastGyroBytes[0] = buf[0]; s_lastGyroBytes[1] = buf[1];
+    s_lastGyroBytes[2] = buf[2]; s_lastGyroBytes[3] = buf[3];
+    s_lastGyroBytes[4] = buf[4]; s_lastGyroBytes[5] = buf[5];
     s_imuHealthy = 1U;
     s_lastErrorStage = IMU_ERROR_NONE;
     return 1U;
@@ -497,6 +501,7 @@ void IMU_ResetYaw(void)
     s_yawDeg_x10 = 0;
     s_yawValid = 1U;
     s_yawFault = 0U;
+    s_lastYawDelta_x10 = 0;
 }
 int32_t IMU_GetYawDeg_x10(void)   { return s_yawDeg_x10; }
 uint8_t IMU_IsReady(void)         { return s_imuReady; }
@@ -507,6 +512,14 @@ int16_t IMU_GetLastGyroYRaw(void)  { return s_lastGyroYRaw; }
 int16_t IMU_GetLastGyroZRaw(void)  { return s_lastGyroZRaw; }
 int16_t IMU_GetLastGyroZDps_x10(void) { return s_lastGyroZDps_x10; }
 int32_t IMU_GetLastYawDelta_x10(void) { return s_lastYawDelta_x10; }
+uint8_t IMU_GetLastGyroByte(uint8_t index)
+{
+    return (index < 6U) ? s_lastGyroBytes[index] : 0U;
+}
+uint8_t IMU_DebugReadReg(uint8_t reg, uint8_t *value)
+{
+    return IMU_SoftReadRegRetry(s_mpuAddr, reg, value, IMU_SOFT_RETRY_COUNT);
+}
 uint8_t IMU_GetAddr(void)         { return s_mpuAddr; }
 uint8_t IMU_IsAddrValid(void)     { return s_mpuAddrValid; }
 uint8_t IMU_GetRecoverCount(void) { return 0U; }

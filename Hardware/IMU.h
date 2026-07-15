@@ -21,6 +21,8 @@ int16_t IMU_GetLastGyroYRaw(void);
 int16_t IMU_GetLastGyroZRaw(void);
 int16_t IMU_GetLastGyroZDps_x10(void);
 int32_t IMU_GetLastYawDelta_x10(void);
+uint8_t IMU_GetLastGyroByte(uint8_t index);
+uint8_t IMU_DebugReadReg(uint8_t reg, uint8_t *value);
 
 uint8_t IMU_GetGyroRawZ_x10(int16_t *rawZ_x10, int16_t *dps_x10);
 

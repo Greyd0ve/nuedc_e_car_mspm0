@@ -275,15 +275,48 @@ static void BoardTest_PrintIMU(void)
             int16_t gz = IMU_GetLastGyroZRaw();
             int16_t off = IMU_GetGyroZOffset();
             int32_t dyaw = IMU_GetLastYawDelta_x10();
+            uint8_t r[5];
 
-            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X gx=%d gy=%d gz=%d off=%d gz_dps=%d.%d yaw_raw=%d yaw=%d.%d dyaw=%d.%d healthy=%u\r\n",
-                          (unsigned int)addr, (unsigned int)who,
+            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X healthy=%u\r\n",
+                          (unsigned int)addr, (unsigned int)who, (unsigned int)healthy);
+            Serial_Printf("[imu-gyro] gx=%d gy=%d gz=%d off=%d gz_dps=%d.%d\r\n",
                           (int)gx, (int)gy, (int)gz, (int)off,
-                          (int)(gzDps_x10 / 10), (int)((gzDps_x10 < 0) ? (-gzDps_x10 % 10) : (gzDps_x10 % 10)),
+                          (int)(gzDps_x10 / 10), (int)((gzDps_x10 < 0) ? (-gzDps_x10 % 10) : (gzDps_x10 % 10)));
+            Serial_Printf("[imu-yaw] yaw_raw=%d yaw=%d.%d dyaw=%d.%d\r\n",
                           (int)yaw_x10,
                           (int)(yaw_x10 / 10), (int)((yaw_x10 < 0) ? (-yaw_x10 % 10) : (yaw_x10 % 10)),
-                          (int)(dyaw / 10), (int)((dyaw < 0) ? (-dyaw % 10) : (dyaw % 10)),
-                          (unsigned int)healthy);
+                          (int)(dyaw / 10), (int)((dyaw < 0) ? (-dyaw % 10) : (dyaw % 10)));
+
+            IMU_DebugReadReg(0x6BU, &r[0]);
+            IMU_DebugReadReg(0x6CU, &r[1]);
+            IMU_DebugReadReg(0x19U, &r[2]);
+            IMU_DebugReadReg(0x1AU, &r[3]);
+            IMU_DebugReadReg(0x1BU, &r[4]);
+            Serial_Printf("[imu-reg] pwr=0x%02X pwr2=0x%02X smpl=0x%02X cfg=0x%02X gyro_cfg=0x%02X\r\n",
+                          (unsigned int)r[0], (unsigned int)r[1],
+                          (unsigned int)r[2], (unsigned int)r[3], (unsigned int)r[4]);
+
+            Serial_Printf("[imu-byte] g=%02X %02X %02X %02X %02X %02X\r\n",
+                          (unsigned int)IMU_GetLastGyroByte(0U),
+                          (unsigned int)IMU_GetLastGyroByte(1U),
+                          (unsigned int)IMU_GetLastGyroByte(2U),
+                          (unsigned int)IMU_GetLastGyroByte(3U),
+                          (unsigned int)IMU_GetLastGyroByte(4U),
+                          (unsigned int)IMU_GetLastGyroByte(5U));
+
+            {
+                uint8_t sb[6];
+                IMU_DebugReadReg(0x43U, &sb[0]);
+                IMU_DebugReadReg(0x44U, &sb[1]);
+                IMU_DebugReadReg(0x45U, &sb[2]);
+                IMU_DebugReadReg(0x46U, &sb[3]);
+                IMU_DebugReadReg(0x47U, &sb[4]);
+                IMU_DebugReadReg(0x48U, &sb[5]);
+                Serial_Printf("[imu-single] g=%02X %02X %02X %02X %02X %02X\r\n",
+                              (unsigned int)sb[0], (unsigned int)sb[1],
+                              (unsigned int)sb[2], (unsigned int)sb[3],
+                              (unsigned int)sb[4], (unsigned int)sb[5]);
+            }
         }
         else
         {
