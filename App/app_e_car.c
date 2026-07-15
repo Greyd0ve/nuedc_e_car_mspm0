@@ -488,7 +488,7 @@ static void ECar_HandleLineRun(void)
 
         if (s_lostMs >= g_eCarParam.lost_timeout_ms)
         {
-            ECar_EnterFault(E_CAR_FAULT_LINE_LOST);
+            ECar_EnterRecover();
             return;
         }
 
@@ -657,13 +657,13 @@ static void ECar_HandleRecover(void)
             s_lostMs += E_CAR_CONTROL_PERIOD_MS;
         }
 
-        if (s_lostMs >= g_eCarParam.lost_timeout_ms)
+        if (s_lostMs >= 2000U)
         {
             ECar_EnterFault(E_CAR_FAULT_RECOVER_TIMEOUT);
             return;
         }
 
-        turnCmd = ECar_CalcSearchTurnCmd();
+        turnCmd = g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN;
     }
 
     ECar_SetSpeedCmd(g_eCarParam.recover_speed, turnCmd);
