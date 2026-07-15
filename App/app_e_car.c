@@ -36,6 +36,8 @@
 #define ECAR_CORNER_CENTER_MASK              0x7EU
 #define ECAR_CORNER_CENTER_MIN_BLACK_COUNT    2U
 #define ECAR_CORNER_CENTER_CONFIRM_COUNT    3U
+#define ECAR_CORNER_ANY_LINE_MIN_TURN_PULSE     80
+#define ECAR_CORNER_ANY_LINE_CONFIRM_COUNT      3U
 
 
 ECarParam_t g_eCarParam =
@@ -599,9 +601,23 @@ static void ECar_HandleCornerTurn(void)
     ECar_SetSpeedCmd(0.0f,
                      g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN);
 
-    if (turnDelta >= g_eCarParam.corner_center_min_turn_pulse)
     {
-        if (ECar_IsCenterLineCaught())
+        uint8_t lineCaught = 0U;
+
+        if (turnDelta >= g_eCarParam.corner_center_min_turn_pulse &&
+            ECar_IsCenterLineCaught())
+        {
+            lineCaught = 1U;
+        }
+
+        if (!lineCaught &&
+            turnDelta >= ECAR_CORNER_ANY_LINE_MIN_TURN_PULSE &&
+            ECar_IsStableLineAfterCorner())
+        {
+            lineCaught = 1U;
+        }
+
+        if (lineCaught)
         {
             if (s_cornerCenterLineCount < 255U)
             {
