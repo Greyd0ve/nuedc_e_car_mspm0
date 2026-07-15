@@ -19,6 +19,9 @@
 #define E_SERIAL_FIELD_MAX       8U                       /* 单帧最多字段数 */
 #define E_SERIAL_FIELD_LEN       16U                      /* 预留字段长度常量，当前不作为数组长度使用 */
 #define E_SERIAL_PLOT_PERIOD_MS  ECAR_SERIAL_PLOT_PERIOD_MS /* 串口曲线/遥测输出周期，单位 ms */
+#ifndef E_SERIAL_PLOT_ENABLE
+#define E_SERIAL_PLOT_ENABLE        0U
+#endif
 #define E_SERIAL_LINE_PERIOD_MS  200U                     /* 正式模式 [line] 遥测输出周期，单位 ms */
 #define E_SERIAL_JOYSTICK_ACK_MS 500U                     /* joystick 忽略提示最小间隔，单位 ms */
 
@@ -1117,10 +1120,12 @@ static void ESerial_PeriodicTelemetry(uint16_t periodMs)
     if (s_plotMs >= E_SERIAL_PLOT_PERIOD_MS)
     {
         s_plotMs = 0U;
+#if E_SERIAL_PLOT_ENABLE
 #if ECAR_BOARD_TEST_MODE
         ESerial_SendBoardTestTelemetry();
 #else
         ESerial_SendRunPlot();
+#endif
 #endif
     }
 
