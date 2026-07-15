@@ -50,8 +50,8 @@
 
 /*
  * Nominal JGA25-370B + 65mm wheel conversion constants.
- * ECAR_ENCODER_EDGE_MULTIPLIER must match the configured encoder edge mode:
- * 1.0=A single edge, 2.0=A both edges, 4.0=AB quadrature.
+ * ECAR_ENCODER_PULSE_PER_REV is measured under Encoder.c default
+ * A rising-edge counting mode. See app_config.h encoder comment.
  */
 #define ECAR_PI_F                               3.1415926f
 #define ECAR_WHEEL_DIAMETER_CM                 6.5f

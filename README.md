@@ -63,7 +63,7 @@ STBY 当前直接接 5V，软件不能依赖 STBY 关断电机，只能通过 PW
 
 | 外设 | 映射 |
 | --- | --- |
-| OLED_H8_I2C | H8 1x8 排母前 4 针，GND / 3V3 / SCL(SKC) PB9 / SDA PB8，默认启用 |
+| OLED_H8_I2C | H8 1x8 排母前 4 针，GND / 3V3 / SCL(SKC) PB9 / SDA PB8，ECAR_OLED_ENABLE 默认关闭；启用后默认使用 H8 I2C 接法 |
 | I2C0 | PA31 SCL / PA28 SDA，MPU6050 六轴传感器 |
 | OLED_H8_SPI | 可选 H8 1x8 排母 SPI 模式，SCL PB9 / SDA PB8 / RES PB10 / DC PB11 / CS PB14，默认关闭 |
 | BEEP | A07 |
