@@ -49,6 +49,11 @@ static uint8_t  s_mpuAddrValid   = 0U;
 static uint8_t  s_lastErrorStage = IMU_ERROR_NONE;
 static uint8_t  s_initErrorStage = IMU_ERROR_NONE;
 static uint32_t s_lastI2CStatus  = 0U;
+static int16_t  s_lastGyroXRaw   = 0;
+static int16_t  s_lastGyroYRaw   = 0;
+static int16_t  s_lastGyroZRaw   = 0;
+static int16_t  s_lastGyroZDps_x10 = 0;
+static int32_t  s_lastYawDelta_x10 = 0;
 
 static void IMU_IIC_DelayUs(uint32_t us)
 {
@@ -456,6 +461,9 @@ uint8_t IMU_ReadGyroRaw(int16_t *gx, int16_t *gy, int16_t *gz)
     *gy = (int16_t)(((uint16_t)buf[2] << 8U) | (uint16_t)buf[3]);
     *gz = (int16_t)(((uint16_t)buf[4] << 8U) | (uint16_t)buf[5]);
 
+    s_lastGyroXRaw = *gx;
+    s_lastGyroYRaw = *gy;
+    s_lastGyroZRaw = *gz;
     s_imuHealthy = 1U;
     s_lastErrorStage = IMU_ERROR_NONE;
     return 1U;
@@ -486,6 +494,12 @@ void IMU_ResetYaw(void)     { s_yawDeg_x10 = 0; s_yawValid = 1U; }
 int32_t IMU_GetYawDeg_x10(void)   { return s_yawDeg_x10; }
 uint8_t IMU_IsReady(void)         { return s_imuReady; }
 uint8_t IMU_IsHealthy(void)       { return s_imuHealthy; }
+int16_t IMU_GetGyroZOffset(void)   { return s_gyroZOffset; }
+int16_t IMU_GetLastGyroXRaw(void)  { return s_lastGyroXRaw; }
+int16_t IMU_GetLastGyroYRaw(void)  { return s_lastGyroYRaw; }
+int16_t IMU_GetLastGyroZRaw(void)  { return s_lastGyroZRaw; }
+int16_t IMU_GetLastGyroZDps_x10(void) { return s_lastGyroZDps_x10; }
+int32_t IMU_GetLastYawDelta_x10(void) { return s_lastYawDelta_x10; }
 uint8_t IMU_GetAddr(void)         { return s_mpuAddr; }
 uint8_t IMU_IsAddrValid(void)     { return s_mpuAddrValid; }
 uint8_t IMU_GetRecoverCount(void) { return 0U; }
@@ -527,6 +541,7 @@ uint8_t IMU_GetGyroRawZ_x10(int16_t *rawZ_x10, int16_t *dps_x10)
 
     *rawZ_x10 = gzRaw;
     *dps_x10 = (int16_t)((int32_t)(gzRaw - s_gyroZOffset) * 2500L / 32768L);
+    s_lastGyroZDps_x10 = *dps_x10;
     return 1U;
 }
 
@@ -534,11 +549,27 @@ void IMU_UpdateYaw(uint16_t dt_ms)
 {
     int16_t gzRaw;
     int16_t dummyX, dummyY;
-    int32_t dps_x100;
+    int64_t dps_x100;
+    int64_t delta_x10;
 
     if (!s_yawValid || !s_imuReady) { return; }
     if (!IMU_ReadGyroRaw(&dummyX, &dummyY, &gzRaw)) { return; }
 
-    dps_x100 = (int32_t)(gzRaw - s_gyroZOffset) * 25000L / 32768L;
-    s_yawDeg_x10 += (dps_x100 * (int32_t)dt_ms) / 10000L;
+    dps_x100 = (int64_t)(gzRaw - s_gyroZOffset) * 25000LL / 32768LL;
+    delta_x10 = (dps_x100 * (int64_t)dt_ms) / 10000LL;
+
+    s_lastYawDelta_x10 = (int32_t)delta_x10;
+
+    if (delta_x10 > 100LL || delta_x10 < -100LL)
+    {
+        s_imuHealthy = 0U;
+        return;
+    }
+
+    s_yawDeg_x10 += (int32_t)delta_x10;
+
+    if (s_yawDeg_x10 > 36000L || s_yawDeg_x10 < -36000L)
+    {
+        s_yawDeg_x10 = 0L;
+    }
 }

@@ -270,11 +270,18 @@ static void BoardTest_PrintIMU(void)
 
         if (healthy)
         {
-            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X gz_raw=%d gz_dps=%d.%d yaw=%d.%d healthy=%u\r\n",
+            int16_t gx = IMU_GetLastGyroXRaw();
+            int16_t gy = IMU_GetLastGyroYRaw();
+            int16_t gz = IMU_GetLastGyroZRaw();
+            int16_t off = IMU_GetGyroZOffset();
+            int32_t dyaw = IMU_GetLastYawDelta_x10();
+
+            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X gx=%d gy=%d gz=%d off=%d gz_dps=%d.%d yaw=%d.%d dyaw=%d.%d healthy=%u\r\n",
                           (unsigned int)addr, (unsigned int)who,
-                          (int)gzRaw,
+                          (int)gx, (int)gy, (int)gz, (int)off,
                           (int)(gzDps_x10 / 10), (int)((gzDps_x10 < 0) ? (-gzDps_x10 % 10) : (gzDps_x10 % 10)),
                           (int)(yaw_x10 / 10), (int)((yaw_x10 < 0) ? (-yaw_x10 % 10) : (yaw_x10 % 10)),
+                          (int)(dyaw / 10), (int)((dyaw < 0) ? (-dyaw % 10) : (dyaw % 10)),
                           (unsigned int)healthy);
         }
         else
@@ -341,6 +348,7 @@ void BoardTest_Init(void)
     if (IMU_IsReady())
     {
         IMU_CalibrateGyroZ(300);
+        Serial_Printf("[imu] calib offset=%d\r\n", (int)IMU_GetGyroZOffset());
         IMU_ResetYaw();
     }
 #endif

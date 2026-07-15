@@ -15,6 +15,12 @@ void    IMU_ResetYaw(void);
 void    IMU_UpdateYaw(uint16_t dt_ms);
 int32_t IMU_GetYawDeg_x10(void);
 uint8_t IMU_IsHealthy(void);
+int16_t IMU_GetGyroZOffset(void);
+int16_t IMU_GetLastGyroXRaw(void);
+int16_t IMU_GetLastGyroYRaw(void);
+int16_t IMU_GetLastGyroZRaw(void);
+int16_t IMU_GetLastGyroZDps_x10(void);
+int32_t IMU_GetLastYawDelta_x10(void);
 
 uint8_t IMU_GetGyroRawZ_x10(int16_t *rawZ_x10, int16_t *dps_x10);
 
