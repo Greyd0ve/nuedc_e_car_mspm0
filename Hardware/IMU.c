@@ -57,6 +57,8 @@ static int16_t  s_lastGyroZDps_x10 = 0;
 static int32_t  s_lastYawDelta_x10 = 0;
 static uint8_t  s_lastGyroBytes[6];
 
+static uint8_t IMU_ReadGyroRawSingle(int16_t *gx, int16_t *gy, int16_t *gz);
+
 static void IMU_IIC_DelayUs(uint32_t us)
 {
     delay_cycles((CPUCLK_FREQ / 1000000UL) * us);
@@ -473,9 +475,17 @@ static uint8_t IMU_ReadGyroRawSingle(int16_t *gx, int16_t *gy, int16_t *gz)
     s_lastGyroXRaw = *gx;
     s_lastGyroYRaw = *gy;
     s_lastGyroZRaw = *gz;
-    s_lastGyroBytes[0] = (uint8_t)((*gx >> 8) & 0xFF); s_lastGyroBytes[1] = (uint8_t)(*gx & 0xFF);
-    s_lastGyroBytes[2] = (uint8_t)((*gy >> 8) & 0xFF); s_lastGyroBytes[3] = (uint8_t)(*gy & 0xFF);
-    s_lastGyroBytes[4] = (uint8_t)((*gz >> 8) & 0xFF); s_lastGyroBytes[5] = (uint8_t)(*gz & 0xFF);
+    {
+        uint16_t rawX = (uint16_t)(*gx);
+        uint16_t rawY = (uint16_t)(*gy);
+        uint16_t rawZ = (uint16_t)(*gz);
+        s_lastGyroBytes[0] = (uint8_t)(rawX >> 8U);
+        s_lastGyroBytes[1] = (uint8_t)(rawX & 0xFFU);
+        s_lastGyroBytes[2] = (uint8_t)(rawY >> 8U);
+        s_lastGyroBytes[3] = (uint8_t)(rawY & 0xFFU);
+        s_lastGyroBytes[4] = (uint8_t)(rawZ >> 8U);
+        s_lastGyroBytes[5] = (uint8_t)(rawZ & 0xFFU);
+    }
     s_imuHealthy = 1U;
     s_lastErrorStage = IMU_ERROR_NONE;
     return 1U;
@@ -510,7 +520,16 @@ void IMU_ResetYaw(void)
     s_yawFault = 0U;
     s_lastYawDelta_x10 = 0;
 }
-int32_t IMU_GetYawDeg_x10(void)   { return s_yawDeg_x10; }
+int32_t IMU_GetYawDeg_x10(void)
+{
+    if (s_yawDeg_x10 > 36000L || s_yawDeg_x10 < -36000L)
+    {
+        s_yawFault = 1U;
+        s_imuHealthy = 0U;
+        s_yawDeg_x10 = 0L;
+    }
+    return s_yawDeg_x10;
+}
 uint8_t IMU_IsReady(void)         { return s_imuReady; }
 uint8_t IMU_IsHealthy(void)       { return (uint8_t)((s_imuHealthy != 0U && s_yawFault == 0U) ? 1U : 0U); }
 int16_t IMU_GetGyroZOffset(void)   { return s_gyroZOffset; }
