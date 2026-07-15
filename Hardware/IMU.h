@@ -23,5 +23,6 @@ uint8_t IMU_Scan(uint8_t *foundAddr);
 uint32_t IMU_GetLastI2CStatus(void);
 uint8_t IMU_GetLastErrorStage(void);
 uint8_t IMU_GetAddr(void);
+uint8_t IMU_IsAddrValid(void);
 
 #endif

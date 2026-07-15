@@ -32,6 +32,7 @@ static int16_t  s_gyroZOffset    = 0;
 static int32_t  s_yawDeg_x10     = 0;
 static uint8_t  s_yawValid       = 0U;
 static uint8_t  s_mpuAddr        = 0x68U;
+static uint8_t  s_mpuAddrValid   = 0U;
 static uint32_t s_lastI2CStatus  = 0U;
 static uint8_t  s_lastErrorStage = IMU_ERROR_NONE;
 
@@ -192,11 +193,13 @@ uint8_t IMU_Scan(uint8_t *foundAddr)
     }
 
     *foundAddr = 0U;
+    s_mpuAddrValid = 0U;
 
     if (IMU_ProbeAddress(0x68U))
     {
         *foundAddr = 0x68U;
         s_mpuAddr = 0x68U;
+        s_mpuAddrValid = 1U;
         return 1U;
     }
 
@@ -204,6 +207,7 @@ uint8_t IMU_Scan(uint8_t *foundAddr)
     {
         *foundAddr = 0x69U;
         s_mpuAddr = 0x69U;
+        s_mpuAddrValid = 1U;
         return 1U;
     }
 
@@ -213,7 +217,7 @@ uint8_t IMU_Scan(uint8_t *foundAddr)
 void IMU_Init(void)
 {
     uint8_t who = 0U;
-    uint8_t found = 0U;
+    uint8_t foundAddr = 0U;
 
     s_imuReady = 0U;
     s_imuHealthy = 0U;
@@ -221,13 +225,13 @@ void IMU_Init(void)
     s_yawDeg_x10 = 0;
     s_yawValid = 0U;
     s_mpuAddr = 0x68U;
+    s_mpuAddrValid = 0U;
     s_lastI2CStatus = 0U;
     s_lastErrorStage = IMU_ERROR_NONE;
 
     if (!IMU_ReadWhoAmI(&who) || who != MPU6050_WHO_AM_I_VAL)
     {
-        found = IMU_Scan(&found);
-        if (!found)
+        if (!IMU_Scan(&foundAddr))
         {
             return;
         }
@@ -425,4 +429,9 @@ uint8_t IMU_GetLastErrorStage(void)
 uint8_t IMU_GetAddr(void)
 {
     return s_mpuAddr;
+}
+
+uint8_t IMU_IsAddrValid(void)
+{
+    return s_mpuAddrValid;
 }
