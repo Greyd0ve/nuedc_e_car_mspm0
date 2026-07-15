@@ -82,6 +82,8 @@ static void IMU_SCL_SET(uint8_t level)
 
 static void IMU_SoftI2CInit(void)
 {
+    DL_I2C_disableController(I2C_SHARED_INST);
+
     DL_GPIO_initDigitalOutput(IMU_SCL_IOMUX);
     DL_GPIO_setPins(IMU_SCL_PORT, IMU_SCL_PIN);
     DL_GPIO_enableOutput(IMU_SCL_PORT, IMU_SCL_PIN);
@@ -95,15 +97,12 @@ static void IMU_IIC_BusRecover(void)
 {
     uint8_t i;
 
-    IMU_SDA_OUT();
+    IMU_SDA_IN();
     IMU_SCL_SET(1);
-    IMU_SDA_SET(1);
     IMU_IIC_DelayUs(20);
 
-    IMU_SDA_IN();
     if (IMU_SDA_GET() == 0U)
     {
-        IMU_SDA_OUT();
         for (i = 0U; i < 9U; i++)
         {
             IMU_SCL_SET(0);
@@ -374,7 +373,11 @@ void IMU_Init(void)
 
     if (!IMU_ReadWhoAmI(&who) || who != MPU6050_WHO_AM_I_VAL)
     {
-        if (!IMU_Scan(&foundAddr)) { s_initErrorStage = IMU_ERROR_ADDR_WRITE_NACK; return; }
+        if (!IMU_Scan(&foundAddr))
+        {
+            s_initErrorStage = (s_lastErrorStage != IMU_ERROR_NONE) ? s_lastErrorStage : IMU_ERROR_ADDR_WRITE_NACK;
+            return;
+        }
         if (!IMU_ReadWhoAmI(&who) || who != MPU6050_WHO_AM_I_VAL)
         {
             s_lastErrorStage = IMU_ERROR_WHO_MISMATCH;
