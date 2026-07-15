@@ -208,7 +208,6 @@ void App_Line_Update(void)
 
     if (count == 0)
     {
-        /* 没有检测到黑线：标记丢线，但保留最近一次有效误差。 */
         g_lineValid = 0U;
         App_Line_HoldLastError();
         if (s_zeroMaskCount < 255U) s_zeroMaskCount++;
@@ -218,20 +217,11 @@ void App_Line_Update(void)
         }
         s_cornerMaskStableCount = 0U;
     }
-    else if ((uint8_t)count >= cornerBlackCountTh)
-    {
-        /* 大面积黑色区域视为角点标记，不作为普通可循迹黑线。 */
-        g_lineValid = 0U;
-        App_Line_HoldLastError();
-        if (s_cornerMaskStableCount < 255U) s_cornerMaskStableCount++;
-        s_zeroMaskCount = 0U;
-    }
-    else if (((uint8_t)count < cornerBlackCountTh) && continuous)
+    else
     {
         float rawError;
         float alpha;
 
-        /* 普通黑线：1 到 cornerBlackCountTh-1 路连续黑线视为有效循迹线。 */
         rawError = (float)sum / (float)count;
         alpha = App_Line_LimitFloat(g_lineFilterAlpha, 0.0f, 1.0f);
 
@@ -249,19 +239,25 @@ void App_Line_Update(void)
         s_lastValidError = g_lineError;
         g_lineValid = 1U;
         g_lastLineDir = (g_lineError >= 0) ? 1 : -1;
-        g_lineLostMs = 0;
-        s_zeroMaskCount = 0U;
-        s_cornerMaskStableCount = 0U;
-        s_badMaskCount = (uint8_t)(s_badMaskCount / 2U);
-    }
-    else
-    {
-        /* 非连续或过宽 mask 判为异常，避免车辆跟随噪声转向。 */
-        g_lineValid = 0U;
-        App_Line_HoldLastError();
-        if (s_badMaskCount < 255U) s_badMaskCount++;
-        s_zeroMaskCount = 0U;
-        s_cornerMaskStableCount = 0U;
+        g_lineLostMs = 0U;
+
+        if ((uint8_t)count >= cornerBlackCountTh)
+        {
+            if (s_cornerMaskStableCount < 255U) s_cornerMaskStableCount++;
+            s_zeroMaskCount = 0U;
+        }
+        else if (continuous)
+        {
+            s_zeroMaskCount = 0U;
+            s_cornerMaskStableCount = 0U;
+            s_badMaskCount = (uint8_t)(s_badMaskCount / 2U);
+        }
+        else
+        {
+            if (s_badMaskCount < 255U) s_badMaskCount++;
+            s_zeroMaskCount = 0U;
+            s_cornerMaskStableCount = 0U;
+        }
     }
 
     g_lineBadMaskCount = s_badMaskCount;

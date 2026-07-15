@@ -64,7 +64,7 @@ ECarParam_t g_eCarParam =
 
     50U,
     120U,
-    220U,
+    110U,
     1800U,
 
     ECAR_DEFAULT_MIN_CORNER_INTERVAL_PULSE,
@@ -72,7 +72,7 @@ ECarParam_t g_eCarParam =
 
     5U,
     160U,
-    40U
+    20U
 };
 
 volatile float g_forwardKp = 2.0f;
