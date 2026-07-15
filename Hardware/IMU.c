@@ -25,7 +25,8 @@
 #define IMU_ERROR_WRITE_REG            7U
 #define IMU_ERROR_IDLE_AFTER_RECOVER   8U
 
-static uint8_t  s_imuReady       = 0U;
+static uint16_t s_recoverCount      = 0U;
+static uint8_t  s_imuReady          = 0U;
 static uint8_t  s_imuHealthy     = 0U;
 static int16_t  s_gyroZOffset    = 0;
 static int32_t  s_yawDeg_x10     = 0;
@@ -39,6 +40,8 @@ static void IMU_I2CRecover(void)
 {
     uint32_t timeout = MPU6050_I2C_TIMEOUT;
 
+    s_recoverCount++;
+
     DL_I2C_resetControllerTransfer(MPU6050_I2C_INST);
     DL_I2C_flushControllerTXFIFO(MPU6050_I2C_INST);
     DL_I2C_flushControllerRXFIFO(MPU6050_I2C_INST);
@@ -50,6 +53,12 @@ static void IMU_I2CRecover(void)
         DL_I2C_INTERRUPT_CONTROLLER_ARBITRATION_LOST |
         DL_I2C_INTERRUPT_CONTROLLER_START |
         DL_I2C_INTERRUPT_CONTROLLER_STOP);
+
+    if ((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_IDLE) == 0U)
+    {
+        DL_I2C_disableController(MPU6050_I2C_INST);
+        DL_I2C_enableController(MPU6050_I2C_INST);
+    }
 
     while (timeout > 0U)
     {
@@ -69,15 +78,21 @@ static uint8_t IMU_WaitIdle(void)
     while (timeout > 0U)
     {
         s_lastI2CStatus = DL_I2C_getControllerStatus(MPU6050_I2C_INST);
-        if ((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_ERROR) != 0U)
-        {
-            s_lastErrorStage = IMU_ERROR_WAIT_IDLE;
-            return 0U;
-        }
+
         if ((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_IDLE) != 0U)
         {
             return 1U;
         }
+
+        if ((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_BUSY) == 0U)
+        {
+            if ((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_ERROR) != 0U)
+            {
+                s_lastErrorStage = IMU_ERROR_WAIT_IDLE;
+                return 0U;
+            }
+        }
+
         timeout--;
     }
 
@@ -512,6 +527,26 @@ uint32_t IMU_GetLastI2CStatus(void)
 uint8_t IMU_GetLastErrorStage(void)
 {
     return s_lastErrorStage;
+}
+
+uint8_t IMU_GetRecoverCount(void)
+{
+    return (uint8_t)(s_recoverCount > 255U ? 255U : s_recoverCount);
+}
+
+uint8_t IMU_StatusHasIdle(uint32_t status)
+{
+    return (uint8_t)(((status & DL_I2C_CONTROLLER_STATUS_IDLE) != 0U) ? 1U : 0U);
+}
+
+uint8_t IMU_StatusHasBusy(uint32_t status)
+{
+    return (uint8_t)(((status & DL_I2C_CONTROLLER_STATUS_BUSY) != 0U) ? 1U : 0U);
+}
+
+uint8_t IMU_StatusHasError(uint32_t status)
+{
+    return (uint8_t)(((status & DL_I2C_CONTROLLER_STATUS_ERROR) != 0U) ? 1U : 0U);
 }
 
 uint8_t IMU_GetAddr(void)

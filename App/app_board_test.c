@@ -168,6 +168,16 @@ static void BoardTest_PrintIMU(void)
         uint8_t ack69 = IMU_ProbeAddressAck(0x69U);
         uint8_t foundAddr = 0U;
 
+        if (stage == 8U)
+        {
+            Serial_Printf("[imu-status] raw=0x%08lX idle=%u busy=%u error=%u recover=%u\r\n",
+                          (unsigned long)status,
+                          (unsigned int)IMU_StatusHasIdle(status),
+                          (unsigned int)IMU_StatusHasBusy(status),
+                          (unsigned int)IMU_StatusHasError(status),
+                          (unsigned int)IMU_GetRecoverCount());
+        }
+
         Serial_Printf("[imu-ack] 68=%u 69=%u status=0x%08lX stage=%u\r\n",
                       (unsigned int)ack68, (unsigned int)ack69,
                       (unsigned long)status, (unsigned int)stage);
