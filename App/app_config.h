@@ -57,7 +57,16 @@
 #define ECAR_WHEEL_DIAMETER_CM                 6.5f
 #define ECAR_WHEEL_CIRCUMFERENCE_CM            (ECAR_WHEEL_DIAMETER_CM * ECAR_PI_F)
 
-/* New motor measured value: 367 pulses per wheel revolution. */
+/*
+ * Encoder counting mode:
+ * - Current Encoder.c default counts only encoder A rising edges.
+ * - Encoder B is sampled only for direction judgement.
+ * - ECAR_ENCODER_PULSE_PER_REV is the measured wheel-end pulse count under
+ *   this exact counting mode.
+ *
+ * If Encoder.c is changed to A both-edge counting or AB quadrature counting,
+ * this value must be measured again.
+ */
 #define ECAR_ENCODER_PULSE_PER_REV             367.0f
 #define ECAR_CM_PER_PULSE                      (ECAR_WHEEL_CIRCUMFERENCE_CM / ECAR_ENCODER_PULSE_PER_REV)
 

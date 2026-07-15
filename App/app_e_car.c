@@ -1,5 +1,6 @@
 #include "app_e_car.h"
 #include "app_config.h"
+#include "app_tuning.h"
 #include "app_control.h"
 #include "app_line.h"
 #include "Board_Config.h"
@@ -62,9 +63,9 @@ ECarParam_t g_eCarParam =
     ECAR_DEFAULT_CORNER_FORWARD_CMPS,
     ECAR_DEFAULT_CORNER_TURN_CMPS,
 
-    0.040f,
-		0.025f,
-		ECAR_DEFAULT_TURN_LIMIT_CMPS,
+    TUNE_LINE_KP,
+    TUNE_LINE_KD,
+    TUNE_LINE_TURN_LIMIT_CMPS,
 
     50U,
     120U,
@@ -115,7 +116,7 @@ volatile float g_lineTurnSign = 1.0f;
 volatile float g_lineKp = 0.035f;
 volatile float g_lineKd = 0.080f;
 volatile float g_lineTurnLimit = 12.0f;
-volatile float g_lineFilterAlpha = 0.58f;
+volatile float g_lineFilterAlpha = TUNE_LINE_FILTER_ALPHA;
 volatile int16_t g_lineError = 0;
 volatile uint8_t g_lineValid = 0U;
 volatile uint8_t g_lineMask = 0U;
