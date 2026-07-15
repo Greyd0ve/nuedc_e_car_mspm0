@@ -448,27 +448,34 @@ void IMU_Init(void)
 
 uint8_t IMU_ReadGyroRaw(int16_t *gx, int16_t *gy, int16_t *gz)
 {
-    uint8_t buf[6];
+    return IMU_ReadGyroRawSingle(gx, gy, gz);
+}
+
+static uint8_t IMU_ReadGyroRawSingle(int16_t *gx, int16_t *gy, int16_t *gz)
+{
+    uint8_t hi, lo;
 
     if (gx == 0 || gy == 0 || gz == 0) { return 0U; }
     if (!s_imuReady) { return 0U; }
 
-    if (!IMU_SoftReadRegsRetry(s_mpuAddr, MPU6050_REG_GYRO_XOUT_H, buf, 6U, IMU_SOFT_RETRY_COUNT))
-    {
-        s_imuHealthy = 0U;
-        return 0U;
-    }
+    if (!IMU_SoftReadRegRetry(s_mpuAddr, 0x43U, &hi, IMU_SOFT_RETRY_COUNT)) { s_imuHealthy = 0U; return 0U; }
+    if (!IMU_SoftReadRegRetry(s_mpuAddr, 0x44U, &lo, IMU_SOFT_RETRY_COUNT)) { s_imuHealthy = 0U; return 0U; }
+    *gx = (int16_t)(((uint16_t)hi << 8U) | (uint16_t)lo);
 
-    *gx = (int16_t)(((uint16_t)buf[0] << 8U) | (uint16_t)buf[1]);
-    *gy = (int16_t)(((uint16_t)buf[2] << 8U) | (uint16_t)buf[3]);
-    *gz = (int16_t)(((uint16_t)buf[4] << 8U) | (uint16_t)buf[5]);
+    if (!IMU_SoftReadRegRetry(s_mpuAddr, 0x45U, &hi, IMU_SOFT_RETRY_COUNT)) { s_imuHealthy = 0U; return 0U; }
+    if (!IMU_SoftReadRegRetry(s_mpuAddr, 0x46U, &lo, IMU_SOFT_RETRY_COUNT)) { s_imuHealthy = 0U; return 0U; }
+    *gy = (int16_t)(((uint16_t)hi << 8U) | (uint16_t)lo);
+
+    if (!IMU_SoftReadRegRetry(s_mpuAddr, 0x47U, &hi, IMU_SOFT_RETRY_COUNT)) { s_imuHealthy = 0U; return 0U; }
+    if (!IMU_SoftReadRegRetry(s_mpuAddr, 0x48U, &lo, IMU_SOFT_RETRY_COUNT)) { s_imuHealthy = 0U; return 0U; }
+    *gz = (int16_t)(((uint16_t)hi << 8U) | (uint16_t)lo);
 
     s_lastGyroXRaw = *gx;
     s_lastGyroYRaw = *gy;
     s_lastGyroZRaw = *gz;
-    s_lastGyroBytes[0] = buf[0]; s_lastGyroBytes[1] = buf[1];
-    s_lastGyroBytes[2] = buf[2]; s_lastGyroBytes[3] = buf[3];
-    s_lastGyroBytes[4] = buf[4]; s_lastGyroBytes[5] = buf[5];
+    s_lastGyroBytes[0] = (uint8_t)((*gx >> 8) & 0xFF); s_lastGyroBytes[1] = (uint8_t)(*gx & 0xFF);
+    s_lastGyroBytes[2] = (uint8_t)((*gy >> 8) & 0xFF); s_lastGyroBytes[3] = (uint8_t)(*gy & 0xFF);
+    s_lastGyroBytes[4] = (uint8_t)((*gz >> 8) & 0xFF); s_lastGyroBytes[5] = (uint8_t)(*gz & 0xFF);
     s_imuHealthy = 1U;
     s_lastErrorStage = IMU_ERROR_NONE;
     return 1U;
