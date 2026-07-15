@@ -217,7 +217,7 @@ UART1.peripheral.rxPin.$assign = "PB7";
 
 I2C1.$name                     = "I2C_SHARED";
 I2C1.basicEnableController     = true;
-I2C1.basicControllerBusSpeed   = 400000;
+I2C1.basicControllerBusSpeed   = 100000;
 I2C1.advAnalogGlitchFilter     = "DISABLED";
 I2C1.peripheral.$assign        = "I2C0";
 I2C1.peripheral.sclPin.$assign = "PA31";

@@ -156,16 +156,40 @@ static void BoardTest_PrintIMU(void)
 {
 #if ECAR_TEST_IMU_ENABLE
     uint8_t who = 0U;
+    uint8_t addr;
+
+    addr = IMU_GetAddr();
 
     if (!IMU_ReadWhoAmI(&who))
     {
-        Serial_SendString("[imu] fail\r\n");
+        uint32_t status = IMU_GetLastI2CStatus();
+        uint8_t stage = IMU_GetLastErrorStage();
+
+        if (addr == 0U)
+        {
+            Serial_Printf("[imu] fail scan=none status=0x%08lX stage=%u\r\n",
+                          (unsigned long)status, (unsigned int)stage);
+        }
+        else
+        {
+            Serial_Printf("[imu] fail addr=0x%02X status=0x%08lX stage=%u\r\n",
+                          (unsigned int)addr, (unsigned long)status, (unsigned int)stage);
+        }
         return;
     }
 
     if (!IMU_IsReady())
     {
-        Serial_Printf("[imu] not_ready who=0x%02X healthy=0\r\n", (unsigned int)who);
+        if (who != MPU6050_WHO_AM_I_VAL)
+        {
+            Serial_Printf("[imu] who_mismatch who=0x%02X addr=0x%02X\r\n",
+                          (unsigned int)who, (unsigned int)addr);
+        }
+        else
+        {
+            Serial_Printf("[imu] not_ready who=0x%02X addr=0x%02X healthy=0\r\n",
+                          (unsigned int)who, (unsigned int)addr);
+        }
         return;
     }
 
@@ -183,8 +207,8 @@ static void BoardTest_PrintIMU(void)
 
         if (healthy)
         {
-            Serial_Printf("[imu] ok who=0x%02X gz_raw=%d gz_dps=%d.%d yaw=%d.%d healthy=%u\r\n",
-                          (unsigned int)who,
+            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X gz_raw=%d gz_dps=%d.%d yaw=%d.%d healthy=%u\r\n",
+                          (unsigned int)addr, (unsigned int)who,
                           (int)gzRaw,
                           (int)(gzDps_x10 / 10), (int)((gzDps_x10 < 0) ? (-gzDps_x10 % 10) : (gzDps_x10 % 10)),
                           (int)(yaw_x10 / 10), (int)((yaw_x10 < 0) ? (-yaw_x10 % 10) : (yaw_x10 % 10)),
@@ -192,8 +216,8 @@ static void BoardTest_PrintIMU(void)
         }
         else
         {
-            Serial_Printf("[imu] ok who=0x%02X gyro_fail healthy=%u\r\n",
-                          (unsigned int)who, (unsigned int)healthy);
+            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X gyro_fail healthy=%u\r\n",
+                          (unsigned int)addr, (unsigned int)who, (unsigned int)healthy);
         }
     }
 #else

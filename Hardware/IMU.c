@@ -1,7 +1,6 @@
 #include "IMU.h"
 #include "Board_Config.h"
 
-#define MPU6050_ADDR             0x68U
 #define MPU6050_WHO_AM_I_VAL     0x68U
 
 #define MPU6050_REG_WHO_AM_I     0x75U
@@ -18,11 +17,28 @@
 
 #define MPU6050_DLPF_CFG         2U
 
-static uint8_t  s_imuReady  = 0U;
-static uint8_t  s_imuHealthy = 0U;
-static int16_t  s_gyroZOffset = 0;
-static int32_t  s_yawDeg_x10 = 0;
-static uint8_t  s_yawValid = 0U;
+#define IMU_ERROR_NONE              0U
+#define IMU_ERROR_WAIT_IDLE         1U
+#define IMU_ERROR_TX_FIFO_FILL      2U
+#define IMU_ERROR_TX_DONE           3U
+#define IMU_ERROR_RX_DONE           4U
+#define IMU_ERROR_RX_FIFO_EMPTY     5U
+#define IMU_ERROR_WHO_MISMATCH      6U
+#define IMU_ERROR_WRITE_REG         7U
+
+static uint8_t  s_imuReady       = 0U;
+static uint8_t  s_imuHealthy     = 0U;
+static int16_t  s_gyroZOffset    = 0;
+static int32_t  s_yawDeg_x10     = 0;
+static uint8_t  s_yawValid       = 0U;
+static uint8_t  s_mpuAddr        = 0x68U;
+static uint32_t s_lastI2CStatus  = 0U;
+static uint8_t  s_lastErrorStage = IMU_ERROR_NONE;
+
+static void IMU_I2CRecover(void)
+{
+    DL_I2C_resetControllerTransfer(MPU6050_I2C_INST);
+}
 
 static uint8_t IMU_WaitIdle(void)
 {
@@ -30,18 +46,20 @@ static uint8_t IMU_WaitIdle(void)
 
     while (timeout > 0U)
     {
-        uint32_t status = DL_I2C_getControllerStatus(MPU6050_I2C_INST);
-        if ((status & DL_I2C_CONTROLLER_STATUS_ERROR) != 0U)
+        s_lastI2CStatus = DL_I2C_getControllerStatus(MPU6050_I2C_INST);
+        if ((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_ERROR) != 0U)
         {
+            s_lastErrorStage = IMU_ERROR_WAIT_IDLE;
             return 0U;
         }
-        if ((status & DL_I2C_CONTROLLER_STATUS_IDLE) != 0U)
+        if ((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_IDLE) != 0U)
         {
             return 1U;
         }
         timeout--;
     }
 
+    s_lastErrorStage = IMU_ERROR_WAIT_IDLE;
     return 0U;
 }
 
@@ -51,10 +69,10 @@ static uint8_t IMU_WaitDone(void)
 
     while (timeout > 0U)
     {
-        uint32_t status = DL_I2C_getControllerStatus(MPU6050_I2C_INST);
-        if ((status & DL_I2C_CONTROLLER_STATUS_BUSY) == 0U)
+        s_lastI2CStatus = DL_I2C_getControllerStatus(MPU6050_I2C_INST);
+        if ((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_BUSY) == 0U)
         {
-            return (uint8_t)(((status & DL_I2C_CONTROLLER_STATUS_ERROR) == 0U) ? 1U : 0U);
+            return (uint8_t)(((s_lastI2CStatus & DL_I2C_CONTROLLER_STATUS_ERROR) == 0U) ? 1U : 0U);
         }
         timeout--;
     }
@@ -72,17 +90,24 @@ static uint8_t IMU_WriteReg(uint8_t reg, uint8_t value)
 
     if (!IMU_WaitIdle())
     {
-        DL_I2C_resetControllerTransfer(MPU6050_I2C_INST);
+        IMU_I2CRecover();
     }
     DL_I2C_resetControllerTransfer(MPU6050_I2C_INST);
     written = DL_I2C_fillControllerTXFIFO(MPU6050_I2C_INST, buf, 2U);
     if (written != 2U)
     {
+        s_lastErrorStage = IMU_ERROR_TX_FIFO_FILL;
         return 0U;
     }
-    DL_I2C_startControllerTransfer(MPU6050_I2C_INST, MPU6050_ADDR,
+    DL_I2C_startControllerTransfer(MPU6050_I2C_INST, s_mpuAddr,
         DL_I2C_CONTROLLER_DIRECTION_TX, 2U);
-    return IMU_WaitDone();
+    if (!IMU_WaitDone())
+    {
+        s_lastErrorStage = IMU_ERROR_WRITE_REG;
+        IMU_I2CRecover();
+        return 0U;
+    }
+    return 1U;
 }
 
 static uint8_t IMU_ReadRegs(uint8_t reg, uint8_t *data, uint8_t len)
@@ -97,27 +122,32 @@ static uint8_t IMU_ReadRegs(uint8_t reg, uint8_t *data, uint8_t len)
 
     if (!IMU_WaitIdle())
     {
-        DL_I2C_resetControllerTransfer(MPU6050_I2C_INST);
+        IMU_I2CRecover();
     }
     DL_I2C_resetControllerTransfer(MPU6050_I2C_INST);
     written = DL_I2C_fillControllerTXFIFO(MPU6050_I2C_INST, &reg, 1U);
     if (written != 1U)
     {
+        s_lastErrorStage = IMU_ERROR_TX_FIFO_FILL;
         return 0U;
     }
-    DL_I2C_startControllerTransfer(MPU6050_I2C_INST, MPU6050_ADDR,
+    DL_I2C_startControllerTransfer(MPU6050_I2C_INST, s_mpuAddr,
         DL_I2C_CONTROLLER_DIRECTION_TX, 1U);
     if (!IMU_WaitDone())
     {
+        s_lastErrorStage = IMU_ERROR_TX_DONE;
+        IMU_I2CRecover();
         return 0U;
     }
 
     DL_I2C_startFlushControllerRXFIFO(MPU6050_I2C_INST);
     DL_I2C_stopFlushControllerRXFIFO(MPU6050_I2C_INST);
-    DL_I2C_startControllerTransfer(MPU6050_I2C_INST, MPU6050_ADDR,
+    DL_I2C_startControllerTransfer(MPU6050_I2C_INST, s_mpuAddr,
         DL_I2C_CONTROLLER_DIRECTION_RX, len);
     if (!IMU_WaitDone())
     {
+        s_lastErrorStage = IMU_ERROR_RX_DONE;
+        IMU_I2CRecover();
         return 0U;
     }
 
@@ -125,6 +155,7 @@ static uint8_t IMU_ReadRegs(uint8_t reg, uint8_t *data, uint8_t len)
     {
         if (DL_I2C_isControllerRXFIFOEmpty(MPU6050_I2C_INST))
         {
+            s_lastErrorStage = IMU_ERROR_RX_FIFO_EMPTY;
             return 0U;
         }
         data[i] = DL_I2C_receiveControllerData(MPU6050_I2C_INST);
@@ -133,23 +164,78 @@ static uint8_t IMU_ReadRegs(uint8_t reg, uint8_t *data, uint8_t len)
     return 1U;
 }
 
+uint8_t IMU_ProbeAddress(uint8_t addr)
+{
+    uint8_t savedAddr;
+    uint8_t who;
+    uint8_t result;
+
+    savedAddr = s_mpuAddr;
+    s_mpuAddr = addr;
+
+    result = IMU_ReadWhoAmI(&who);
+    if (result && who == MPU6050_WHO_AM_I_VAL)
+    {
+        s_mpuAddr = addr;
+        return 1U;
+    }
+
+    s_mpuAddr = savedAddr;
+    return 0U;
+}
+
+uint8_t IMU_Scan(uint8_t *foundAddr)
+{
+    if (foundAddr == 0)
+    {
+        return 0U;
+    }
+
+    *foundAddr = 0U;
+
+    if (IMU_ProbeAddress(0x68U))
+    {
+        *foundAddr = 0x68U;
+        s_mpuAddr = 0x68U;
+        return 1U;
+    }
+
+    if (IMU_ProbeAddress(0x69U))
+    {
+        *foundAddr = 0x69U;
+        s_mpuAddr = 0x69U;
+        return 1U;
+    }
+
+    return 0U;
+}
+
 void IMU_Init(void)
 {
     uint8_t who = 0U;
+    uint8_t found = 0U;
 
     s_imuReady = 0U;
     s_imuHealthy = 0U;
     s_gyroZOffset = 0;
     s_yawDeg_x10 = 0;
     s_yawValid = 0U;
+    s_mpuAddr = 0x68U;
+    s_lastI2CStatus = 0U;
+    s_lastErrorStage = IMU_ERROR_NONE;
 
-    if (!IMU_ReadWhoAmI(&who))
+    if (!IMU_ReadWhoAmI(&who) || who != MPU6050_WHO_AM_I_VAL)
     {
-        return;
-    }
-    if (who != MPU6050_WHO_AM_I_VAL)
-    {
-        return;
+        found = IMU_Scan(&found);
+        if (!found)
+        {
+            return;
+        }
+        if (!IMU_ReadWhoAmI(&who) || who != MPU6050_WHO_AM_I_VAL)
+        {
+            s_lastErrorStage = IMU_ERROR_WHO_MISMATCH;
+            return;
+        }
     }
 
     if (!IMU_WriteReg(MPU6050_REG_PWR_MGMT_1, 0x00U))
@@ -183,8 +269,7 @@ void IMU_Init(void)
 
 uint8_t IMU_ReadWhoAmI(uint8_t *whoAmI)
 {
-    uint8_t reg = MPU6050_REG_WHO_AM_I;
-    uint16_t written;
+    uint8_t data;
 
     if (whoAmI == 0)
     {
@@ -192,39 +277,13 @@ uint8_t IMU_ReadWhoAmI(uint8_t *whoAmI)
     }
 
     *whoAmI = 0U;
-    if (!IMU_WaitIdle())
-    {
-        DL_I2C_resetControllerTransfer(MPU6050_I2C_INST);
-    }
 
-    DL_I2C_resetControllerTransfer(MPU6050_I2C_INST);
-    written = DL_I2C_fillControllerTXFIFO(MPU6050_I2C_INST, &reg, 1U);
-    if (written != 1U)
-    {
-        return 0U;
-    }
-    DL_I2C_startControllerTransfer(MPU6050_I2C_INST, MPU6050_ADDR,
-        DL_I2C_CONTROLLER_DIRECTION_TX, 1U);
-    if (!IMU_WaitDone())
+    if (!IMU_ReadRegs(MPU6050_REG_WHO_AM_I, &data, 1U))
     {
         return 0U;
     }
 
-    DL_I2C_startFlushControllerRXFIFO(MPU6050_I2C_INST);
-    DL_I2C_stopFlushControllerRXFIFO(MPU6050_I2C_INST);
-    DL_I2C_startControllerTransfer(MPU6050_I2C_INST, MPU6050_ADDR,
-        DL_I2C_CONTROLLER_DIRECTION_RX, 1U);
-    if (!IMU_WaitDone())
-    {
-        return 0U;
-    }
-
-    if (DL_I2C_isControllerRXFIFOEmpty(MPU6050_I2C_INST))
-    {
-        return 0U;
-    }
-
-    *whoAmI = DL_I2C_receiveControllerData(MPU6050_I2C_INST);
+    *whoAmI = data;
     return 1U;
 }
 
@@ -351,4 +410,19 @@ uint8_t IMU_GetGyroRawZ_x10(int16_t *rawZ_x10, int16_t *dps_x10)
     *dps_x10 = (int16_t)((int32_t)(gzRaw - s_gyroZOffset) * 2500L / 32768L);
 
     return 1U;
+}
+
+uint32_t IMU_GetLastI2CStatus(void)
+{
+    return s_lastI2CStatus;
+}
+
+uint8_t IMU_GetLastErrorStage(void)
+{
+    return s_lastErrorStage;
+}
+
+uint8_t IMU_GetAddr(void)
+{
+    return s_mpuAddr;
 }

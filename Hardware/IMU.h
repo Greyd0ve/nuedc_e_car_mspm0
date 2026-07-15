@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define MPU6050_WHO_AM_I_VAL  0x68U
+
 void IMU_Init(void);
 uint8_t IMU_ReadWhoAmI(uint8_t *whoAmI);
 uint8_t IMU_IsReady(void);
@@ -15,5 +17,11 @@ int32_t IMU_GetYawDeg_x10(void);
 uint8_t IMU_IsHealthy(void);
 
 uint8_t IMU_GetGyroRawZ_x10(int16_t *rawZ_x10, int16_t *dps_x10);
+
+uint8_t IMU_ProbeAddress(uint8_t addr);
+uint8_t IMU_Scan(uint8_t *foundAddr);
+uint32_t IMU_GetLastI2CStatus(void);
+uint8_t IMU_GetLastErrorStage(void);
+uint8_t IMU_GetAddr(void);
 
 #endif
