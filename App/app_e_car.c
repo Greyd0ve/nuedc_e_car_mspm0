@@ -31,6 +31,10 @@
 #define ECAR_LINE_ERR_SLOW_GAIN       7.0f
 #define ECAR_LINE_DERR_SLOW_GAIN      3.0f
 
+#define ECAR_LINE_STRONG_ERR_TH          230
+#define ECAR_LINE_STRONG_SPEED_CMPS      10.0f
+#define ECAR_LINE_STRONG_TURN_CMPS       8.0f
+
 #define ECAR_CORNER_TURN_PULSE_DEFAULT  180
 
 #define ECAR_CORNER_CENTER_MASK              0x7EU
@@ -58,8 +62,8 @@ ECarParam_t g_eCarParam =
     ECAR_DEFAULT_CORNER_FORWARD_CMPS,
     ECAR_DEFAULT_CORNER_TURN_CMPS,
 
-    0.035f,
-		0.020f,
+    0.040f,
+		0.025f,
 		ECAR_DEFAULT_TURN_LIMIT_CMPS,
 
     50U,
@@ -499,6 +503,30 @@ static void ECar_HandleLineRun(void)
         s_lostMs = 0U;
         turnCmd = ECar_CalcLineTurnCmd();
         speedCmd = ECar_CalcAdaptiveBaseSpeed((float)g_lineError, s_lineDError);
+
+        {
+            int16_t errAbs;
+
+            errAbs = g_lineError;
+            if (errAbs < 0)
+            {
+                errAbs = (int16_t)(-errAbs);
+            }
+
+            if (errAbs >= ECAR_LINE_STRONG_ERR_TH)
+            {
+                speedCmd = ECAR_LINE_STRONG_SPEED_CMPS;
+
+                if (turnCmd > ECAR_LINE_STRONG_TURN_CMPS)
+                {
+                    turnCmd = ECAR_LINE_STRONG_TURN_CMPS;
+                }
+                else if (turnCmd < -ECAR_LINE_STRONG_TURN_CMPS)
+                {
+                    turnCmd = -ECAR_LINE_STRONG_TURN_CMPS;
+                }
+            }
+        }
     }
     else
     {

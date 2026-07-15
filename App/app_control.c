@@ -50,7 +50,7 @@
  * 每 10ms 最多变化 3 个 PWM 单位。
  * 这样电机不会突然冲一下，也不会突然掉速。
  */
-#define APP_PWM_SLEW_STEP          3
+#define APP_PWM_SLEW_STEP          5
 
 #define APP_SPEED_PI_KP          1.2f
 #define APP_SPEED_PI_KI          0.08f

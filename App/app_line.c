@@ -121,7 +121,7 @@ void App_Line_Update(void)
 {
     uint8_t raw[GRAYSCALE_CHANNELS];
     /* 传感器权重以中心为 0，正值表示黑线偏右。 */
-    static const int16_t weight[GRAYSCALE_CHANNELS] = {-100, -250, -150, -50, 50, 150, 250, 500};
+    static const int16_t weight[GRAYSCALE_CHANNELS] = {-400, -280, -160, -60, 60, 160, 280, 400};
     int32_t sum = 0;
     int16_t count = 0;
     uint8_t mask = 0;
