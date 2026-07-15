@@ -21,6 +21,10 @@
 #define IMU_ERROR_DATA_TIMEOUT      5U
 #define IMU_ERROR_WHO_MISMATCH      6U
 #define IMU_ERROR_WRITE_REG         7U
+#define IMU_ERROR_WRITE_PWR_FAIL    8U
+#define IMU_ERROR_WRITE_SMPR_FAIL   9U
+#define IMU_ERROR_WRITE_CONF_FAIL   10U
+#define IMU_ERROR_WRITE_GYRO_FAIL   11U
 
 #define IMU_SDA_PORT    GPIO_I2C_SHARED_SDA_PORT
 #define IMU_SDA_PIN     GPIO_I2C_SHARED_SDA_PIN
@@ -106,6 +110,7 @@ static void IMU_IIC_Stop(void)
     IMU_IIC_DelayUs(5);
     IMU_SDA_SET(1);
     IMU_IIC_DelayUs(5);
+    IMU_IIC_DelayUs(10);
 }
 
 static void IMU_IIC_SendAck(uint8_t ack)
@@ -343,16 +348,16 @@ void IMU_Init(void)
         s_mpuAddrValid = 1U;
     }
 
-    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_PWR_MGMT_1, 0x00U)) { return; }
+    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_PWR_MGMT_1, 0x00U)) { s_lastErrorStage = IMU_ERROR_WRITE_PWR_FAIL; return; }
 
     {
         uint32_t delay = 200000U;
         while (delay > 0U) { delay--; }
     }
 
-    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_SMPLRT_DIV, 0x00U)) { return; }
-    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_CONFIG, MPU6050_DLPF_CFG)) { return; }
-    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_GYRO_CONFIG, (MPU6050_GYRO_FS_SEL << 3U))) { return; }
+    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_SMPLRT_DIV, 0x00U)) { s_lastErrorStage = IMU_ERROR_WRITE_SMPR_FAIL; return; }
+    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_CONFIG, MPU6050_DLPF_CFG)) { s_lastErrorStage = IMU_ERROR_WRITE_CONF_FAIL; return; }
+    if (!IMU_SoftWriteReg(s_mpuAddr, MPU6050_REG_GYRO_CONFIG, (MPU6050_GYRO_FS_SEL << 3U))) { s_lastErrorStage = IMU_ERROR_WRITE_GYRO_FAIL; return; }
 
     s_imuReady = 1U;
     s_imuHealthy = 1U;
@@ -452,6 +457,10 @@ const char *IMU_GetErrorStageName(uint8_t stage)
         case IMU_ERROR_DATA_TIMEOUT:    return "data_timeout";
         case IMU_ERROR_WHO_MISMATCH:    return "who_mismatch";
         case IMU_ERROR_WRITE_REG:       return "write_reg_fail";
+        case IMU_ERROR_WRITE_PWR_FAIL:  return "write_pwr_fail";
+        case IMU_ERROR_WRITE_SMPR_FAIL: return "write_smpr_fail";
+        case IMU_ERROR_WRITE_CONF_FAIL: return "write_config_fail";
+        case IMU_ERROR_WRITE_GYRO_FAIL: return "write_gyro_config_fail";
         default:                        return "unknown";
     }
 }

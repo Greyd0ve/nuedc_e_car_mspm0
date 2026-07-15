@@ -173,6 +173,25 @@ static void BoardTest_PrintIMU(void)
         if (IMU_Scan(&foundAddr))
         {
             Serial_Printf("[imu-scan] found 0x%02X\r\n", (unsigned int)foundAddr);
+
+            {
+                uint8_t retryWho = 0U;
+                if (IMU_ReadWhoAmI(&retryWho))
+                {
+                    Serial_Printf("[imu] retry who=0x%02X addr=0x%02X ready=%u healthy=%u\r\n",
+                                  (unsigned int)retryWho, (unsigned int)foundAddr,
+                                  (unsigned int)IMU_IsReady(),
+                                  (unsigned int)IMU_IsHealthy());
+                }
+                else
+                {
+                    uint8_t retryStage = IMU_GetLastErrorStage();
+                    Serial_Printf("[imu] retry_fail addr=0x%02X stage=%u name=%s\r\n",
+                                  (unsigned int)foundAddr,
+                                  (unsigned int)retryStage,
+                                  IMU_GetErrorStageName(retryStage));
+                }
+            }
         }
         else
         {
