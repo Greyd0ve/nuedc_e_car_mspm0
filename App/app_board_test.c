@@ -276,17 +276,18 @@ static void BoardTest_PrintIMU(void)
             int16_t off = IMU_GetGyroZOffset();
             int32_t dyaw = IMU_GetLastYawDelta_x10();
 
-            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X gx=%d gy=%d gz=%d off=%d gz_dps=%d.%d yaw=%d.%d dyaw=%d.%d healthy=%u\r\n",
+            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X gx=%d gy=%d gz=%d off=%d gz_dps=%d.%d yaw_raw=%d yaw=%d.%d dyaw=%d.%d healthy=%u\r\n",
                           (unsigned int)addr, (unsigned int)who,
                           (int)gx, (int)gy, (int)gz, (int)off,
                           (int)(gzDps_x10 / 10), (int)((gzDps_x10 < 0) ? (-gzDps_x10 % 10) : (gzDps_x10 % 10)),
+                          (int)yaw_x10,
                           (int)(yaw_x10 / 10), (int)((yaw_x10 < 0) ? (-yaw_x10 % 10) : (yaw_x10 % 10)),
                           (int)(dyaw / 10), (int)((dyaw < 0) ? (-dyaw % 10) : (dyaw % 10)),
                           (unsigned int)healthy);
         }
         else
         {
-            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X gyro_fail healthy=%u\r\n",
+            Serial_Printf("[imu] fail addr=0x%02X who=0x%02X gyro_fail healthy=%u\r\n",
                           (unsigned int)addr, (unsigned int)who, (unsigned int)healthy);
         }
     }

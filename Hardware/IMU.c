@@ -44,6 +44,7 @@ static uint8_t  s_imuHealthy     = 0U;
 static int16_t  s_gyroZOffset    = 0;
 static int32_t  s_yawDeg_x10     = 0;
 static uint8_t  s_yawValid       = 0U;
+static uint8_t  s_yawFault       = 0U;
 static uint8_t  s_mpuAddr        = 0x68U;
 static uint8_t  s_mpuAddrValid   = 0U;
 static uint8_t  s_lastErrorStage = IMU_ERROR_NONE;
@@ -488,12 +489,18 @@ void IMU_CalibrateGyroZ(uint16_t samples)
 
     s_yawDeg_x10 = 0;
     s_yawValid = 1U;
+    s_yawFault = 0U;
 }
 
-void IMU_ResetYaw(void)     { s_yawDeg_x10 = 0; s_yawValid = 1U; }
+void IMU_ResetYaw(void)
+{
+    s_yawDeg_x10 = 0;
+    s_yawValid = 1U;
+    s_yawFault = 0U;
+}
 int32_t IMU_GetYawDeg_x10(void)   { return s_yawDeg_x10; }
 uint8_t IMU_IsReady(void)         { return s_imuReady; }
-uint8_t IMU_IsHealthy(void)       { return s_imuHealthy; }
+uint8_t IMU_IsHealthy(void)       { return (uint8_t)((s_imuHealthy != 0U && s_yawFault == 0U) ? 1U : 0U); }
 int16_t IMU_GetGyroZOffset(void)   { return s_gyroZOffset; }
 int16_t IMU_GetLastGyroXRaw(void)  { return s_lastGyroXRaw; }
 int16_t IMU_GetLastGyroYRaw(void)  { return s_lastGyroYRaw; }
@@ -562,6 +569,7 @@ void IMU_UpdateYaw(uint16_t dt_ms)
 
     if (delta_x10 > 100LL || delta_x10 < -100LL)
     {
+        s_yawFault = 1U;
         s_imuHealthy = 0U;
         return;
     }
@@ -570,6 +578,9 @@ void IMU_UpdateYaw(uint16_t dt_ms)
 
     if (s_yawDeg_x10 > 36000L || s_yawDeg_x10 < -36000L)
     {
+        s_yawFault = 1U;
+        s_imuHealthy = 0U;
         s_yawDeg_x10 = 0L;
+        return;
     }
 }
