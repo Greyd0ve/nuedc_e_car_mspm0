@@ -65,7 +65,7 @@ ECarParam_t g_eCarParam =
     500U,
     120U,
     220U,
-    1400U,
+    1800U,
 
     ECAR_DEFAULT_MIN_CORNER_INTERVAL_PULSE,
     ECAR_DEFAULT_LAP_PULSE,
@@ -487,12 +487,6 @@ static void ECar_HandleLineRun(void)
         turnCmd = ECar_CalcLineTurnCmd();
         speedCmd = ECar_CalcAdaptiveBaseSpeed((float)g_lineError, s_lineDError);
     }
-    else if (g_lineBlackCount >= g_eCarParam.corner_black_count_th)
-    {
-        s_lostMs = 0U;
-        turnCmd = 0.0f;
-        speedCmd = g_eCarParam.corner_forward_speed;
-    }
     else
     {
         if (s_lostMs < 60000U)
@@ -502,34 +496,26 @@ static void ECar_HandleLineRun(void)
 
         if (s_lostMs >= g_eCarParam.lost_timeout_ms)
         {
-            ECar_EnterRecover();
+            ECar_SetState(E_CAR_CORNER_ENTER);
             return;
         }
 
-        turnCmd = ECar_CalcSearchTurnCmd();
+        turnCmd = 0.0f;
         speedCmd = g_eCarParam.recover_speed;
     }
 
     ECar_SetSpeedCmd(speedCmd, turnCmd);
-
-    if (ECar_IsCornerDetected())
-    {
-        ECar_SetState(E_CAR_CORNER_ENTER);
-        s_cornerCandidateCount = 0U;
-    }
 }
 
 static void ECar_HandleCornerEnter(void)
 {
     int32_t pulse;
 
-    /* 每进入一次 CORNER_ENTER 只计一个角点。 */
     pulse = ECar_GetForwardPulse();
     s_lastCornerForwardPulse = pulse;
-    s_cornerCandidateCount = 0U;
+    s_cornerTurnStartPulse = g_turnEncoderTotal;
     s_cornerCenterLineCount = 0U;
-		s_cornerTurnStartPulse = g_turnEncoderTotal;
-    s_cornerPassStartPulse = ECar_GetForwardPulse();
+
     if (s_cornerCount < 250U)
     {
         s_cornerCount++;
@@ -537,7 +523,6 @@ static void ECar_HandleCornerEnter(void)
 
     if ((s_cornerCount % 4U) == 0U)
     {
-        /* E 题方形赛道按四个角点计一圈。 */
         if (s_lapCount < 250U)
         {
             s_lapCount++;
@@ -602,78 +587,43 @@ static uint8_t ECar_IsCenterLineCaught(void)
 
 static void ECar_HandleCornerTurn(void)
 {
-    int32_t forwardPulse;
-    int32_t forwardDelta;
     int32_t turnPulse;
     int32_t turnDelta;
-    float forwardCmd;
     float turnCmd;
 
-    forwardPulse = ECar_GetForwardPulse();
-    forwardDelta = forwardPulse - s_cornerPassStartPulse;
-    if (forwardDelta < 0) { forwardDelta = -forwardDelta; }
-
-    turnPulse = g_turnEncoderTotal - s_cornerTurnStartPulse;
-    turnDelta = (turnPulse >= 0) ? turnPulse : -turnPulse;
-
-    forwardCmd = g_eCarParam.corner_forward_speed;
-    if (forwardCmd < ECAR_CORNER_ARC_MIN_FORWARD_CMPS)
-    {
-        forwardCmd = ECAR_CORNER_ARC_MIN_FORWARD_CMPS;
-    }
+    turnPulse = g_turnEncoderTotal;
+    turnDelta = (turnPulse >= s_cornerTurnStartPulse)
+                ? (turnPulse - s_cornerTurnStartPulse)
+                : (s_cornerTurnStartPulse - turnPulse);
 
     turnCmd = g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN;
-    {
-        float turnLimit = forwardCmd - ECAR_CORNER_ARC_INNER_MIN_CMPS;
-        if (turnLimit < 2.0f) { turnLimit = 2.0f; }
-        turnCmd = ECar_LimitFloat(turnCmd, -turnLimit, turnLimit);
-    }
+    ECar_SetSpeedCmd(0.0f, turnCmd);
 
-    ECar_SetSpeedCmd(forwardCmd, turnCmd);
-
-    if (turnDelta >= ECAR_CORNER_ARC_MAX_TURN_PULSE)
+    if (s_stateMs >= g_eCarParam.corner_min_turn_ms
+        && turnDelta >= (int32_t)g_eCarParam.corner_center_min_turn_pulse
+        && ECar_IsStableLineAfterCorner())
     {
-        App_Control_ResetPID();
-        s_lineDerivResetPending = 1U;
-        s_cornerCenterLineCount = 0U;
-        s_lostMs = 0U;
-        s_recoverStableMsCount = 0U;
-        ECar_SetState(E_CAR_LINE_RUN);
-        return;
-    }
-
-    if (forwardDelta >= ECAR_CORNER_ARC_MIN_FORWARD_PULSE)
-    {
-        if (ECar_IsStableLineAfterCorner())
+        if (s_cornerCenterLineCount < 255U)
         {
-            if (s_cornerCenterLineCount < 255U)
-            {
-                s_cornerCenterLineCount++;
-            }
-            if (s_cornerCenterLineCount >= ECAR_CORNER_ARC_CONFIRM_COUNT)
-            {
-                App_Control_ResetPID();
-                s_lineDerivResetPending = 1U;
-                s_cornerCenterLineCount = 0U;
-                s_lostMs = 0U;
-                s_recoverStableMsCount = 0U;
-                ECar_SetState(E_CAR_LINE_RUN);
-                return;
-            }
+            s_cornerCenterLineCount++;
         }
-        else
+        if (s_cornerCenterLineCount >= ECAR_CORNER_ARC_CONFIRM_COUNT)
         {
+            App_Control_ResetPID();
+            s_lineDerivResetPending = 1U;
             s_cornerCenterLineCount = 0U;
+            s_lostMs = 0U;
+            s_recoverStableMsCount = 0U;
+            ECar_SetState(E_CAR_LINE_RUN);
+            return;
         }
     }
-
-    if (forwardDelta >= ECAR_CORNER_ARC_MAX_FORWARD_PULSE)
+    else
     {
-        ECar_EnterRecover();
-        return;
+        s_cornerCenterLineCount = 0U;
     }
 
-    if (s_stateMs >= ECAR_CORNER_ARC_TIMEOUT_MS)
+    if (s_stateMs >= g_eCarParam.corner_max_turn_ms)
     {
         ECar_EnterRecover();
         return;

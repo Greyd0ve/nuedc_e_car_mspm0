@@ -15,7 +15,7 @@
 #define ECAR_ENABLE_REMOTE_START                0
 #endif
 #ifndef ECAR_BOARD_TEST_MODE
-#define ECAR_BOARD_TEST_MODE                    1
+#define ECAR_BOARD_TEST_MODE                    0
 #endif
 #ifndef ECAR_TEST_MOTOR_ENABLE
 #define ECAR_TEST_MOTOR_ENABLE                  0
@@ -30,7 +30,7 @@
 #define ECAR_TEST_OLED_ENABLE                   0
 #endif
 #ifndef ECAR_TEST_IMU_ENABLE
-#define ECAR_TEST_IMU_ENABLE                    1
+#define ECAR_TEST_IMU_ENABLE                    0
 #endif
 
 /* Master OLED switch. Set to 1 only when the display is physically connected.
@@ -68,10 +68,10 @@
 #define ECAR_DEFAULT_MIN_CORNER_INTERVAL_PULSE  ((int32_t)((ECAR_MIN_CORNER_INTERVAL_CM / ECAR_CM_PER_PULSE) + 0.5f))
 
 /* Conservative first-run speed defaults, in cm/s. */
-#define ECAR_DEFAULT_BASE_SPEED_CMPS            25.0f
+#define ECAR_DEFAULT_BASE_SPEED_CMPS            18.0f
 #define ECAR_DEFAULT_RECOVER_SPEED_CMPS         6.0f
 #define ECAR_DEFAULT_CORNER_FORWARD_CMPS        10.0f
-#define ECAR_DEFAULT_CORNER_TURN_CMPS           5.0f
+#define ECAR_DEFAULT_CORNER_TURN_CMPS           6.0f
 #define ECAR_DEFAULT_TURN_LIMIT_CMPS            6.0f
 
 #ifndef ECAR_CORNER_CONFIRM_COUNT

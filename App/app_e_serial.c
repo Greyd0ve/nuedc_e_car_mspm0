@@ -1120,10 +1120,10 @@ static void ESerial_PeriodicTelemetry(uint16_t periodMs)
     if (s_plotMs >= E_SERIAL_PLOT_PERIOD_MS)
     {
         s_plotMs = 0U;
-#if E_SERIAL_PLOT_ENABLE
 #if ECAR_BOARD_TEST_MODE
         ESerial_SendBoardTestTelemetry();
 #else
+#if E_SERIAL_PLOT_ENABLE
         ESerial_SendRunPlot();
 #endif
 #endif
