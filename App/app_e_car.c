@@ -612,7 +612,7 @@ void ECar_KeyProcess(void)
             if (s_targetLap > E_CAR_TARGET_LAP_MAX) { s_targetLap = E_CAR_TARGET_LAP_MIN; }
             ECar_SafeStop();
             ECar_SetState(E_CAR_READY);
-            LED_User_BlinkTimes(s_targetLap, 500U);
+            LED_User_BlinkTimes(s_targetLap, 100U);
         }
         return;
     }
