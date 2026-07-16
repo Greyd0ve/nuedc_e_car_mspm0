@@ -119,6 +119,7 @@ static volatile float s_lapProgress = 0.0f;
 static volatile uint8_t s_faultCode = E_CAR_FAULT_NONE;
 static volatile uint16_t s_promptMs = 0U;
 static volatile int32_t s_cornerTurnStartPulse = 0;
+static volatile int32_t s_cornerAdvanceStartPulse = 0;
 
 static float s_lineDError = 0.0f;
 static float s_lastLineError = 0.0f;
@@ -135,6 +136,7 @@ static uint8_t ECar_IsMotionState(ECarState_t state)
 {
     return (uint8_t)(state == E_CAR_LINE_RUN ||
                      state == E_CAR_CORNER_ENTER ||
+                     state == E_CAR_CORNER_ADVANCE ||
                      state == E_CAR_CORNER_TURN);
 }
 
@@ -251,6 +253,8 @@ static void ECar_ResetRunData(void)
     s_currentLapPulse = 0;
     s_lapProgress = 0.0f;
     s_faultCode = E_CAR_FAULT_NONE;
+    s_cornerAdvanceStartPulse = 0;
+    s_cornerTurnStartPulse = 0;
 }
 
 static void ECar_UpdateLapProgress(void)
@@ -431,13 +435,34 @@ static void ECar_HandleCornerEnter(void)
         s_lapProgress = 0.0f;
     }
 
-    s_lastCornerForwardPulse = pulse;
-    s_cornerTurnStartPulse = g_turnEncoderTotal;
+    s_cornerAdvanceStartPulse = pulse;
 
     s_lostMs = 0U;
     App_Control_ResetPID();
     s_lineDerivResetPending = 1U;
-    ECar_SetState(E_CAR_CORNER_TURN);
+    ECar_SetState(E_CAR_CORNER_ADVANCE);
+}
+
+static void ECar_HandleCornerAdvance(void)
+{
+    int32_t advancePulse;
+
+    advancePulse = ECar_GetForwardPulse() - s_cornerAdvanceStartPulse;
+    if (advancePulse < 0) { advancePulse = -advancePulse; }
+
+    if (advancePulse >= ECAR_CORNER_ADVANCE_PULSE)
+    {
+        s_lastCornerForwardPulse = ECar_GetForwardPulse();
+        s_cornerTurnStartPulse = g_turnEncoderTotal;
+
+        s_lostMs = 0U;
+        App_Control_ResetPID();
+        s_lineDerivResetPending = 1U;
+        ECar_SetState(E_CAR_CORNER_TURN);
+        return;
+    }
+
+    ECar_SetSpeedCmd(g_eCarParam.recover_speed, 0.0f);
 }
 
 static void ECar_HandleCornerTurn(void)
@@ -550,6 +575,10 @@ void ECar_Control10ms(void)
 
         case E_CAR_CORNER_ENTER:
             ECar_HandleCornerEnter();
+            break;
+
+        case E_CAR_CORNER_ADVANCE:
+            ECar_HandleCornerAdvance();
             break;
 
         case E_CAR_CORNER_TURN:

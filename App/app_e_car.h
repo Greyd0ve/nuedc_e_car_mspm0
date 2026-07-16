@@ -9,8 +9,8 @@ typedef enum
     E_CAR_READY,
     E_CAR_LINE_RUN,
     E_CAR_CORNER_ENTER,
+    E_CAR_CORNER_ADVANCE,
     E_CAR_CORNER_TURN,
-    E_CAR_LINE_RECOVER,
     E_CAR_FINISH,
     E_CAR_FAULT
 } ECarState_t;

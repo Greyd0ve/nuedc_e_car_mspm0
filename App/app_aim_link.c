@@ -40,8 +40,8 @@ void AimLink_SendCarState(void)
 
         case E_CAR_LINE_RUN:
         case E_CAR_CORNER_ENTER:
+        case E_CAR_CORNER_ADVANCE:
         case E_CAR_CORNER_TURN:
-        case E_CAR_LINE_RECOVER:
             Serial_Printf("[car,state,run,lap,%u,corner,%u,progress,%u,time,%lu]\r\n",
                           (unsigned int)ECar_GetLapCount(),
                           (unsigned int)ECar_GetCornerCount(),

@@ -130,9 +130,14 @@ E 题正方形赛道循迹逻辑：
 1. 正常直线循迹：PD 循迹 + 自适应降速 + 大偏差限幅。
 2. 角点判定：八路灰度全白（`g_lineBlackCount == 0 && g_lineMask == 0`），连续 `ECAR_CORNER_LOST_CONFIRM_MS`（100ms）触发角点。
 3. 第一个角点不要求直线距离；从第二个角点开始，当前边必须已行驶超过 `ECAR_CORNER_MIN_STRAIGHT_CM`（80cm）。
-4. 进入角点后原地左转 90°，由 `g_turnEncoderTotal` 差值达到 `corner_turn_pulse`（默认 160）完成转弯，直接回到直线循迹。
-5. 每 4 个角点计 1 圈，达到 `targetLap` 后停车。
-6. 连续全白超过 `ECAR_LINE_LOST_FAULT_MS`（2500ms）进入 `E_CAR_FAULT` 并停止 PWM。
+4. 判定角点后继续直行 `ECAR_CORNER_ADVANCE_CM`（5cm），再原地左转 90°。
+5. 左转 90° 由 `g_turnEncoderTotal` 差值达到 `corner_turn_pulse`（默认 160）完成转弯，直接回到直线循迹。
+6. 每 4 个角点计 1 圈，达到 `targetLap` 后停车。
+7. 连续全白超过 `ECAR_LINE_LOST_FAULT_MS`（2500ms）进入 `E_CAR_FAULT` 并停止 PWM。
+
+默认参数：
+- 上电 `base_speed` = 25cm/s；
+- 角点后 5cm 压进速度使用 `recover_speed`，默认 6cm/s。
 
 调参参数（串口可覆盖）：
 - `corner_turn_pulse`：左转 90° 脉冲数，默认 160。不足 90° 增大，转过头减小。
