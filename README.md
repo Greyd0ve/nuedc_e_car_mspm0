@@ -95,6 +95,29 @@ HC-04 VCC -> 按模块要求供电
 
 SWDIO/SWCLK 不要配置为普通 GPIO。建议后续硬件把 RST 补到 SWD 接口。
 
+## 后置循迹模块 / 反向车头模式
+
+当前支持通过 `ECAR_REAR_LINE_SENSOR_MODE` 在 `Hardware/Board_Config.h` 中切换机械布局：
+
+```c
+#define ECAR_REAR_LINE_SENSOR_MODE 0U   // 原始前置循迹模块布局
+#define ECAR_REAR_LINE_SENSOR_MODE 1U   // 后置循迹模块布局，新车头方向相对原来反向
+```
+
+后置模式 (`ECAR_REAR_LINE_SENSOR_MODE = 1`) 下：
+
+- 原右轮映射为逻辑左轮，原左轮映射为逻辑右轮；
+- 编码器左右互换；
+- 电机方向和编码器方向符号同步调整；
+- 循迹修正方向 `g_lineTurnSign` 和角点固定转向 `E_CAR_TURN_SIGN` 反号；
+- 灰度逻辑顺序 `g_lineReverseOrderF` 置 1 以匹配新车头视角。
+
+首次切换或重新布线后，必须架空车轮验证：
+
+1. `Motor_SetPWM(+150, +150)` 是否驱动小车向新车头方向前进；
+2. 手推小车向新车头方向时，`g_leftEncoderDelta` 和 `g_rightEncoderDelta` 是否都为正；
+3. 将黑胶带置于灰度模块下方，从新车头方向看，黑线偏左时 `g_lineError` 应为负。
+
 ## 板级测试模式
 
 当前 main 分支默认工作在**正式循迹构建模式**，但不会上电自动跑车：

@@ -20,7 +20,16 @@
 #define E_CAR_CONTROL_PERIOD_MS      ECAR_CONTROL_PERIOD_MS /* 状态机控制周期，单位 ms */
 #define E_CAR_TARGET_LAP_MIN         1U                     /* 最小目标圈数 */
 #define E_CAR_TARGET_LAP_MAX         5U                     /* 最大目标圈数 */
-#define E_CAR_TURN_SIGN              1.0f                   /* 角点固定转向方向符号，必要时调正负 */
+
+/*
+ * E_CAR_TURN_SIGN only affects the fixed corner turn direction.
+ * If the car turns the wrong way at corners, flip this sign.
+ */
+#if ECAR_REAR_LINE_SENSOR_MODE
+#define E_CAR_TURN_SIGN              (-1.0f)
+#else
+#define E_CAR_TURN_SIGN              1.0f
+#endif
 
 #define E_CAR_FAULT_NONE             0U /* 无故障 */
 #define E_CAR_FAULT_LINE_LOST        1U /* 普通循迹阶段丢线超时 */
@@ -111,8 +120,21 @@ volatile int32_t g_forwardEncoderTotal = 0;
 volatile int32_t g_turnEncoderTotal = 0;
 
 volatile float g_lineBlackLevelF = 1.0f;
+
+/*
+ * g_lineReverseOrderF controls the logical left/right order of 8 grayscale
+ * sensors. From the new front, lineError < 0 means black line is on the left,
+ * lineError > 0 means black line is on the right.
+ * g_lineTurnSign controls the line-follow correction direction.
+ * If the car corrects away from the line, flip g_lineTurnSign.
+ */
+#if ECAR_REAR_LINE_SENSOR_MODE
+volatile float g_lineReverseOrderF = 1.0f;
+volatile float g_lineTurnSign = -1.0f;
+#else
 volatile float g_lineReverseOrderF = 0.0f;
 volatile float g_lineTurnSign = 1.0f;
+#endif
 volatile float g_lineKp = TUNE_LINE_KP;
 volatile float g_lineKd = TUNE_LINE_KD;
 volatile float g_lineTurnLimit = TUNE_LINE_TURN_LIMIT_CMPS;

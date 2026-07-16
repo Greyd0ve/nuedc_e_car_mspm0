@@ -10,6 +10,17 @@
  * below this file and can be changed without touching App/Control logic.
  */
 
+/*
+ * ECAR_REAR_LINE_SENSOR_MODE:
+ *   0 = original front sensor module layout;
+ *   1 = rear sensor module layout, new heading is reversed.
+ *       Original right wheel becomes logical left wheel,
+ *       original left wheel becomes logical right wheel.
+ */
+#ifndef ECAR_REAR_LINE_SENSOR_MODE
+#define ECAR_REAR_LINE_SENSOR_MODE 1U
+#endif
+
 /* Compatibility aliases for SysConfig-generated grouped GPIO names. */
 #if !defined(GPIO_I2C0_SCL_PORT) && defined(GPIO_I2C_SHARED_SCL_PORT)
 #define GPIO_I2C0_SCL_PORT              GPIO_I2C_SHARED_SCL_PORT
@@ -64,6 +75,44 @@
 #define MOTOR_USE_STBY                  0U
 #define MOTOR_STBY_TIED_TO_5V           1U
 #define MOTOR_PWM_TIMER_INST            PWM_MOTOR_INST
+
+#if ECAR_REAR_LINE_SENSOR_MODE
+
+/* Rear sensor / reversed heading mode:
+ * original right wheel is logical left wheel;
+ * original left wheel is logical right wheel.
+ */
+#define MOTOR_L_PWM_CC_INDEX            GPIO_PWM_MOTOR_C1_IDX
+#define MOTOR_R_PWM_CC_INDEX            GPIO_PWM_MOTOR_C0_IDX
+#define MOTOR_L_PWM                     MOTOR_L_PWM_CC_INDEX
+#define MOTOR_R_PWM                     MOTOR_R_PWM_CC_INDEX
+#define MOTOR_PWM_LEFT_CC_INDEX         MOTOR_L_PWM_CC_INDEX
+#define MOTOR_PWM_RIGHT_CC_INDEX        MOTOR_R_PWM_CC_INDEX
+#define MOTOR_PWM_PERIOD_COUNTS         1600U
+
+#define MOTOR_L_IN1_PORT                GPIO_MOTOR_R_IN1_PORT   /* PA16 */
+#define MOTOR_L_IN1_PIN                 GPIO_MOTOR_R_IN1_PIN
+#define MOTOR_L_IN1                     MOTOR_L_IN1_PIN
+#define MOTOR_L_IN2_PORT                GPIO_MOTOR_R_IN2_PORT   /* B24 */
+#define MOTOR_L_IN2_PIN                 GPIO_MOTOR_R_IN2_PIN
+#define MOTOR_L_IN2                     MOTOR_L_IN2_PIN
+#define MOTOR_R_IN1_PORT                GPIO_MOTOR_L_IN1_PORT   /* B17 */
+#define MOTOR_R_IN1_PIN                 GPIO_MOTOR_L_IN1_PIN
+#define MOTOR_R_IN1                     MOTOR_R_IN1_PIN
+#define MOTOR_R_IN2_PORT                GPIO_MOTOR_L_IN2_PORT   /* B19 */
+#define MOTOR_R_IN2_PIN                 GPIO_MOTOR_L_IN2_PIN
+#define MOTOR_R_IN2                     MOTOR_R_IN2_PIN
+
+/*
+ * Because new heading is reversed, verify on lifted car:
+ * Motor_SetPWM(+150,+150) should drive toward new front.
+ */
+#define LEFT_MOTOR_DIR                  (-1)
+#define RIGHT_MOTOR_DIR                 (+1)
+
+#else
+
+/* Original front sensor mode. */
 #define MOTOR_L_PWM_CC_INDEX            GPIO_PWM_MOTOR_C0_IDX
 #define MOTOR_R_PWM_CC_INDEX            GPIO_PWM_MOTOR_C1_IDX
 #define MOTOR_L_PWM                     MOTOR_L_PWM_CC_INDEX
@@ -85,6 +134,11 @@
 #define MOTOR_R_IN2_PIN                 GPIO_MOTOR_R_IN2_PIN
 #define MOTOR_R_IN2                     MOTOR_R_IN2_PIN
 
+#define LEFT_MOTOR_DIR                  (+1)
+#define RIGHT_MOTOR_DIR                 (-1)
+
+#endif
+
 /* Legacy aliases kept for older modules during transition. */
 #define MOTOR_AIN1_PORT                 MOTOR_L_IN1_PORT
 #define MOTOR_AIN1_PIN                  MOTOR_L_IN1_PIN
@@ -95,8 +149,6 @@
 #define MOTOR_BIN2_PORT                 MOTOR_R_IN2_PORT
 #define MOTOR_BIN2_PIN                  MOTOR_R_IN2_PIN
 
-#define LEFT_MOTOR_DIR                  (+1)
-#define RIGHT_MOTOR_DIR                 (-1)
 #define LEFT_MOTOR_DIR_SIGN             LEFT_MOTOR_DIR
 #define RIGHT_MOTOR_DIR_SIGN            RIGHT_MOTOR_DIR
 
@@ -106,6 +158,36 @@
  * ENC_R_A -> PA25, ENC_R_B -> PA14
  * A phases are on GPIOA, so GROUP1 GPIOA dispatch handles both counters.
  */
+#if ECAR_REAR_LINE_SENSOR_MODE
+
+/* Rear sensor / reversed heading mode:
+ * original right encoder is logical left encoder;
+ * original left encoder is logical right encoder.
+ */
+#define ENC_L_A_PORT                    GPIO_ENCODER_R_A_PORT
+#define ENC_L_A_PIN                     GPIO_ENCODER_R_A_PIN
+#define ENC_L_A                         ENC_L_A_PIN
+#define ENC_L_B_PORT                    GPIO_ENCODER_R_B_PORT
+#define ENC_L_B_PIN                     GPIO_ENCODER_R_B_PIN
+#define ENC_L_B                         ENC_L_B_PIN
+#define ENC_R_A_PORT                    GPIO_ENCODER_L_A_PORT
+#define ENC_R_A_PIN                     GPIO_ENCODER_L_A_PIN
+#define ENC_R_A                         ENC_R_A_PIN
+#define ENC_R_B_PORT                    GPIO_ENCODER_L_B_PORT
+#define ENC_R_B_PIN                     GPIO_ENCODER_L_B_PIN
+#define ENC_R_B                         ENC_R_B_PIN
+
+/*
+ * Verify by pushing car toward new front:
+ * g_leftEncoderDelta > 0, g_rightEncoderDelta > 0,
+ * g_forwardEncoderTotal increases.
+ */
+#define LEFT_ENCODER_DIR                (-1)
+#define RIGHT_ENCODER_DIR               (+1)
+
+#else
+
+/* Original front sensor mode. */
 #define ENC_L_A_PORT                    GPIO_ENCODER_L_A_PORT
 #define ENC_L_A_PIN                     GPIO_ENCODER_L_A_PIN
 #define ENC_L_A                         ENC_L_A_PIN
@@ -118,6 +200,12 @@
 #define ENC_R_B_PORT                    GPIO_ENCODER_R_B_PORT
 #define ENC_R_B_PIN                     GPIO_ENCODER_R_B_PIN
 #define ENC_R_B                         ENC_R_B_PIN
+
+#define LEFT_ENCODER_DIR                (-1)
+#define RIGHT_ENCODER_DIR               (+1)
+
+#endif
+
 #define ENCODER_GPIO_IRQN               GPIO_ENCODER_INT_IRQN
 
 #define ENCODER_LEFT_A_PORT             ENC_L_A_PORT
@@ -129,8 +217,6 @@
 #define ENCODER_RIGHT_B_PORT            ENC_R_B_PORT
 #define ENCODER_RIGHT_B_PIN             ENC_R_B_PIN
 
-#define LEFT_ENCODER_DIR                (-1)
-#define RIGHT_ENCODER_DIR               (+1)
 #define LEFT_ENCODER_SIGN               LEFT_ENCODER_DIR
 #define RIGHT_ENCODER_SIGN              RIGHT_ENCODER_DIR
 
