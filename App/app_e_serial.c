@@ -406,32 +406,6 @@ static uint8_t ESerial_SetNamedParam(const char *name, float value)
         return 1U;
     }
 
-    if (ESerial_StrEqualIgnoreCase(name, "lost_timeout_ms") ||
-        ESerial_StrEqualIgnoreCase(name, "lost_timeout"))
-    {
-        if (!ESerial_ValueInRange(value, 100.0f, 2000.0f))
-        {
-            ESerial_SendRangeError(name);
-            return 0U;
-        }
-        g_eCarParam.lost_timeout_ms = (uint16_t)ESerial_RoundToInt(value);
-        ESerial_SendSetOkInt(name, (int32_t)g_eCarParam.lost_timeout_ms);
-        return 1U;
-    }
-
-    if (ESerial_StrEqualIgnoreCase(name, "min_corner_interval_pulse") ||
-        ESerial_StrEqualIgnoreCase(name, "min_corner_interval"))
-    {
-        if (!ESerial_ValueInRange(value, 0.0f, 30000.0f))
-        {
-            ESerial_SendRangeError(name);
-            return 0U;
-        }
-        g_eCarParam.min_corner_interval_pulse = ESerial_RoundToInt(value);
-        ESerial_SendSetOkInt(name, g_eCarParam.min_corner_interval_pulse);
-        return 1U;
-    }
-
     if (ESerial_StrEqualIgnoreCase(name, "lap_pulse_default") ||
         ESerial_StrEqualIgnoreCase(name, "lap_pulse"))
     {
@@ -442,22 +416,6 @@ static uint8_t ESerial_SetNamedParam(const char *name, float value)
         }
         g_eCarParam.lap_pulse_default = ESerial_RoundToInt(value);
         ESerial_SendSetOkInt(name, g_eCarParam.lap_pulse_default);
-        return 1U;
-    }
-
-    if (ESerial_StrEqualIgnoreCase(name, "corner_black") ||
-        ESerial_StrEqualIgnoreCase(name, "corner_black_count"))
-    {
-        int32_t count;
-
-        count = ESerial_RoundToInt(value);
-        if (count < 1 || count > 8)
-        {
-            ESerial_SendRangeError(name);
-            return 0U;
-        }
-        g_eCarParam.corner_black_count_th = (uint8_t)count;
-        ESerial_SendSetOkInt(name, count);
         return 1U;
     }
 
@@ -483,34 +441,6 @@ static uint8_t ESerial_SetNamedParam(const char *name, float value)
         }
         g_eCarParam.corner_turn_pulse = (uint16_t)ESerial_RoundToInt(value);
         ESerial_SendSetOkInt(name, (int32_t)g_eCarParam.corner_turn_pulse);
-        return 1U;
-    }
-
-    if (ESerial_StrEqualIgnoreCase(name, "center_min_pulse") ||
-        ESerial_StrEqualIgnoreCase(name, "corner_center_min_turn_pulse"))
-    {
-        if (!ESerial_ValueInRange(value, 0.0f, 150.0f))
-        {
-            ESerial_SendRangeError(name);
-            return 0U;
-        }
-        g_eCarParam.corner_center_min_turn_pulse = (uint16_t)ESerial_RoundToInt(value);
-        ESerial_SendSetOkInt(name, (int32_t)g_eCarParam.corner_center_min_turn_pulse);
-        return 1U;
-    }
-
-    if (ESerial_StrEqualIgnoreCase(name, "corner_max_turn_ms") ||
-        ESerial_StrEqualIgnoreCase(name, "corner_max_turn") ||
-        ESerial_StrEqualIgnoreCase(name, "corner_turn_max_ms") ||
-        ESerial_StrEqualIgnoreCase(name, "corner_force_exit_ms"))
-    {
-        if (!ESerial_ValueInRange(value, 100.0f, 2000.0f))
-        {
-            ESerial_SendRangeError(name);
-            return 0U;
-        }
-        g_eCarParam.corner_max_turn_ms = (uint16_t)ESerial_RoundToInt(value);
-        ESerial_SendSetOkInt(name, (int32_t)g_eCarParam.corner_max_turn_ms);
         return 1U;
     }
 
@@ -739,7 +669,7 @@ static void ESerial_SendParamSnapshot(void)
     ESerial_SendFixedValue(g_eCarParam.line_kd, 2U);
     Serial_SendString(",turnLimit,");
     ESerial_SendFixedValue(g_eCarParam.turn_limit, 0U);
-    Serial_Printf(",lapPulse,%ld,cornerPulse,%u,centerMinPulse,%u,cornerMaxMs,%u,pwmLimit,", (long)g_eCarParam.lap_pulse_default, (unsigned int)g_eCarParam.corner_turn_pulse, (unsigned int)g_eCarParam.corner_center_min_turn_pulse, (unsigned int)g_eCarParam.corner_max_turn_ms);
+    Serial_Printf(",lapPulse,%ld,cornerPulse,%u,pwmLimit,", (long)g_eCarParam.lap_pulse_default, (unsigned int)g_eCarParam.corner_turn_pulse);
     ESerial_SendFixedValue(g_pwmLimit, 0U);
     Serial_SendString("]\r\n");
 }

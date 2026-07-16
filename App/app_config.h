@@ -72,9 +72,20 @@
 
 /* Square track nominal distances. Tune with telemetry after hardware tests. */
 #define ECAR_LAP_DISTANCE_CM                    400.0f
-#define ECAR_MIN_CORNER_INTERVAL_CM             55.0f
+
+/*
+ * Corner detection: all-white (8-channel count == 0) for LOST_CONFIRM_MS
+ * triggers corner. From the second corner onward, the current side must
+ * exceed MIN_STRAIGHT_CM before all-white is recognized as a corner.
+ */
+#define ECAR_CORNER_MIN_STRAIGHT_CM             80.0f
+#define ECAR_CORNER_LOST_CONFIRM_MS             100U
+#define ECAR_LINE_LOST_FAULT_MS                 2500U
+
+#define ECAR_CORNER_MIN_STRAIGHT_PULSE \
+    ((int32_t)(ECAR_CORNER_MIN_STRAIGHT_CM / ECAR_CM_PER_PULSE + 0.5f))
+
 #define ECAR_DEFAULT_LAP_PULSE                  ((int32_t)((ECAR_LAP_DISTANCE_CM / ECAR_CM_PER_PULSE) + 0.5f))
-#define ECAR_DEFAULT_MIN_CORNER_INTERVAL_PULSE  ((int32_t)((ECAR_MIN_CORNER_INTERVAL_CM / ECAR_CM_PER_PULSE) + 0.5f))
 
 /* Conservative first-run speed defaults, in cm/s. */
 #define ECAR_DEFAULT_BASE_SPEED_CMPS            18.0f

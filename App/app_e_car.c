@@ -13,28 +13,18 @@
 #include "cmsis_compiler.h"
 #include <stdint.h>
 
-/* E 题小车状态机。
- * MSPM0 负责循迹、电机控制、编码器计圈、按键、OLED 状态和串口调参。
- * 远程启动保持默认禁用，必须编译期开关显式打开。
- */
-#define E_CAR_CONTROL_PERIOD_MS      ECAR_CONTROL_PERIOD_MS /* 状态机控制周期，单位 ms */
-#define E_CAR_TARGET_LAP_MIN         1U                     /* 最小目标圈数 */
-#define E_CAR_TARGET_LAP_MAX         5U                     /* 最大目标圈数 */
+#define E_CAR_CONTROL_PERIOD_MS      ECAR_CONTROL_PERIOD_MS
+#define E_CAR_TARGET_LAP_MIN         1U
+#define E_CAR_TARGET_LAP_MAX         5U
 
-/*
- * E_CAR_TURN_SIGN only affects the fixed corner turn direction.
- * If the car turns the wrong way at corners, flip this sign.
- */
 #if ECAR_REAR_LINE_SENSOR_MODE
 #define E_CAR_TURN_SIGN              (-1.0f)
 #else
 #define E_CAR_TURN_SIGN              1.0f
 #endif
 
-#define E_CAR_FAULT_NONE             0U /* 无故障 */
-#define E_CAR_FAULT_LINE_LOST        1U /* 普通循迹阶段丢线超时 */
-#define E_CAR_FAULT_RECOVER_TIMEOUT  2U /* 角点后恢复循迹超时 */
-#define E_CAR_FAULT_CORNER_TIMEOUT   3U /* 角点转向阶段超时 */
+#define E_CAR_FAULT_NONE             0U
+#define E_CAR_FAULT_LINE_LOST        1U
 
 #define ECAR_LINE_ERROR_NORM          350.0f
 #define ECAR_LINE_MIN_SPEED_CMPS      8.0f
@@ -45,28 +35,9 @@
 #define ECAR_LINE_STRONG_SPEED_CMPS      10.0f
 #define ECAR_LINE_STRONG_TURN_CMPS       8.0f
 
-#define ECAR_CORNER_TURN_PULSE_DEFAULT  180
-
-#define ECAR_CORNER_CENTER_MASK              0x7EU
-#define ECAR_CORNER_CENTER_MIN_BLACK_COUNT    2U
-#define ECAR_CORNER_CENTER_CONFIRM_COUNT    3U
-#define ECAR_CORNER_LOOSE_MIN_TURN_PULSE       40
-#define ECAR_CORNER_LOOSE_CONFIRM_COUNT        2U
-#define ECAR_RECOVER_LOST_TIMEOUT_MS           2500U
-#define ECAR_RECOVER_TOTAL_TIMEOUT_MS          3000U
-#define ECAR_CORNER_ARC_MIN_FORWARD_PULSE      40
-#define ECAR_CORNER_ARC_MAX_FORWARD_PULSE      260
-#define ECAR_CORNER_ARC_CONFIRM_COUNT          2U
-#define ECAR_CORNER_ARC_TIMEOUT_MS             1400U
-#define ECAR_CORNER_ARC_NO_REVERSE_MARGIN      1.0f
-#define ECAR_CORNER_ARC_INNER_MIN_CMPS         4.0f
-#define ECAR_CORNER_ARC_MAX_TURN_PULSE         120
-#define ECAR_CORNER_ARC_MIN_FORWARD_CMPS       8.0f
-
 
 ECarParam_t g_eCarParam =
 {
-    /* 运动默认值偏保守，实际比赛速度建议通过串口逐步调高。 */
     ECAR_DEFAULT_BASE_SPEED_CMPS,
     ECAR_DEFAULT_RECOVER_SPEED_CMPS,
     ECAR_DEFAULT_CORNER_FORWARD_CMPS,
@@ -76,17 +47,8 @@ ECarParam_t g_eCarParam =
     TUNE_LINE_KD,
     TUNE_LINE_TURN_LIMIT_CMPS,
 
-    50U,
-    120U,
-    110U,
-    400U,
-
-    ECAR_DEFAULT_MIN_CORNER_INTERVAL_PULSE,
     ECAR_DEFAULT_LAP_PULSE,
-
-    5U,
-    160U,
-    20U
+    160U
 };
 
 volatile float g_forwardKp = 2.0f;
@@ -121,13 +83,6 @@ volatile int32_t g_turnEncoderTotal = 0;
 
 volatile float g_lineBlackLevelF = 1.0f;
 
-/*
- * g_lineReverseOrderF controls the logical left/right order of 8 grayscale
- * sensors. From the new front, lineError < 0 means black line is on the left,
- * lineError > 0 means black line is on the right.
- * g_lineTurnSign controls the line-follow correction direction.
- * If the car corrects away from the line, flip g_lineTurnSign.
- */
 #if ECAR_REAR_LINE_SENSOR_MODE
 volatile float g_lineReverseOrderF = 1.0f;
 volatile float g_lineTurnSign = -1.0f;
@@ -150,9 +105,6 @@ volatile uint8_t g_lineCornerMaskStableCount = 0U;
 volatile int8_t g_lastLineDir = 1;
 volatile uint16_t g_lineLostMs = 0U;
 
-/* 私有运行状态。
- * 部分状态会被不同前台任务读取，因此保留 volatile；更新仍不放在长中断中执行。
- */
 static volatile ECarState_t s_state = E_CAR_IDLE;
 static volatile uint8_t s_targetLap = 1U;
 static volatile uint8_t s_lapCount = 0U;
@@ -160,7 +112,6 @@ static volatile uint8_t s_cornerCount = 0U;
 static volatile uint32_t s_runningTimeMs = 0U;
 static volatile uint32_t s_stateMs = 0U;
 static volatile uint32_t s_lostMs = 0U;
-static volatile uint32_t s_recoverStableMsCount = 0U;
 static volatile int32_t s_lastCornerForwardPulse = 0;
 static volatile int32_t s_startForwardPulse = 0;
 static volatile int32_t s_lapStartForwardPulse = 0;
@@ -168,12 +119,7 @@ static volatile int32_t s_currentLapPulse = 0;
 static volatile float s_lapProgress = 0.0f;
 static volatile uint8_t s_faultCode = E_CAR_FAULT_NONE;
 static volatile uint16_t s_promptMs = 0U;
-static volatile uint8_t s_cornerCandidateCount = 0U;
-static volatile uint8_t s_cornerCenterLineCount = 0U;
-
 static volatile int32_t s_cornerTurnStartPulse = 0;
-static volatile int32_t s_cornerPassStartPulse = 0;
-
 
 static float s_lineDError = 0.0f;
 static float s_lastLineError = 0.0f;
@@ -188,11 +134,9 @@ static float ECar_LimitFloat(float value, float minVal, float maxVal)
 
 static uint8_t ECar_IsMotionState(ECarState_t state)
 {
-    /* 只有这些状态允许累计运动时间并输出运动命令。 */
     return (uint8_t)(state == E_CAR_LINE_RUN ||
                      state == E_CAR_CORNER_ENTER ||
-                     state == E_CAR_CORNER_TURN ||
-                     state == E_CAR_LINE_RECOVER);
+                     state == E_CAR_CORNER_TURN);
 }
 
 static float ECar_CalcAdaptiveBaseSpeed(float error, float dError)
@@ -204,10 +148,6 @@ static float ECar_CalcAdaptiveBaseSpeed(float error, float dError)
     eAbs = (error >= 0.0f) ? error : -error;
     deAbs = (dError >= 0.0f) ? dError : -dError;
 
-    /*
-     * error 原始范围大约 -350~350。
-     * 先归一化，再根据偏差和误差变化率降速。
-     */
     eAbs = eAbs / ECAR_LINE_ERROR_NORM;
     deAbs = deAbs / ECAR_LINE_ERROR_NORM;
 
@@ -225,29 +165,20 @@ static float ECar_CalcAdaptiveBaseSpeed(float error, float dError)
 
 static int32_t ECar_GetForwardPulse(void)
 {
-    /* 前进距离使用左右编码器总脉冲平均值，单位为原始脉冲。 */
     return g_forwardEncoderTotal;
 }
 
 static void ECar_SetState(ECarState_t state)
 {
-    /* 每次状态切换都清零状态持续时间，供各状态超时判断使用。 */
     s_state = state;
     s_stateMs = 0U;
 }
 
 static void ECar_PromptStart(uint16_t ms)
 {
-    /* 短提示由 1ms tick 递减，不阻塞主循环。 */
     s_promptMs = ms;
-    if (ms > 0U)
-    {
-        BeepLed_AllOn();
-    }
-    else
-    {
-        BeepLed_AllOff();
-    }
+    if (ms > 0U) { BeepLed_AllOn(); }
+    else         { BeepLed_AllOff(); }
 }
 
 void ECar_PromptTick1ms(void)
@@ -255,20 +186,13 @@ void ECar_PromptTick1ms(void)
     if (s_promptMs > 0U)
     {
         s_promptMs--;
-        if ((s_promptMs % 80U) == 0U)
-        {
-            BeepLed_AllTurn();
-        }
-        if (s_promptMs == 0U)
-        {
-            BeepLed_AllOff();
-        }
+        if ((s_promptMs % 80U) == 0U) { BeepLed_AllTurn(); }
+        if (s_promptMs == 0U)         { BeepLed_AllOff(); }
     }
 }
 
 static void ECar_SafeStop(void)
 {
-    /* 本地先明确清目标/使能，再交给统一硬停车函数处理。 */
     g_targetForwardSpeed = 0.0f;
     g_targetTurnSpeed = 0.0f;
     g_carEnable = 0U;
@@ -277,7 +201,6 @@ static void ECar_SafeStop(void)
 
 static void ECar_ClearEncoderTotals(void)
 {
-    /* 清零总脉冲和待处理增量时要屏蔽编码器中断更新。 */
     __disable_irq();
     g_leftEncoderTotal = 0;
     g_rightEncoderTotal = 0;
@@ -291,7 +214,6 @@ static void ECar_ClearEncoderTotals(void)
 
 static void ECar_SyncLineParams(void)
 {
-    /* app_line 读取全局循迹参数，这里把 E 题当前调参同步过去。 */
     g_lineKp = g_eCarParam.line_kp;
     g_lineKd = g_eCarParam.line_kd;
     g_lineTurnLimit = g_eCarParam.turn_limit;
@@ -299,7 +221,6 @@ static void ECar_SyncLineParams(void)
 
 static void ECar_ResetLineState(void)
 {
-    /* 同时清空 app_line 内部状态和状态机侧的循迹记忆。 */
     App_Line_ResetState();
     g_lineError = 0;
     g_lineValid = 0U;
@@ -314,13 +235,10 @@ static void ECar_ResetLineState(void)
     s_lastLineError = 0.0f;
     s_lineDError = 0.0f;
     s_lineDerivResetPending = 1U;
-    s_cornerCandidateCount = 0U;
-    s_cornerCenterLineCount = 0U;
 }
 
 static void ECar_ResetRunData(void)
 {
-    /* 新一轮运行不能继承上一轮圈数、角点、故障或编码器历史。 */
     ECar_ClearEncoderTotals();
     ECar_ResetLineState();
 
@@ -329,16 +247,12 @@ static void ECar_ResetRunData(void)
     s_runningTimeMs = 0U;
     s_stateMs = 0U;
     s_lostMs = 0U;
-    s_recoverStableMsCount = 0U;
     s_lastCornerForwardPulse = 0;
     s_startForwardPulse = 0;
     s_lapStartForwardPulse = 0;
     s_currentLapPulse = 0;
     s_lapProgress = 0.0f;
     s_faultCode = E_CAR_FAULT_NONE;
-    s_cornerCandidateCount = 0U;
-    s_cornerCenterLineCount = 0U;
-    s_cornerPassStartPulse = 0;
 }
 
 static void ECar_UpdateLapProgress(void)
@@ -350,19 +264,12 @@ static void ECar_UpdateLapProgress(void)
 
     pulse = ECar_GetForwardPulse();
     lapPulse = pulse - s_lapStartForwardPulse;
-    if (lapPulse < 0)
-    {
-        lapPulse = 0;
-    }
+    if (lapPulse < 0) { lapPulse = 0; }
 
     s_currentLapPulse = lapPulse;
     defaultPulse = g_eCarParam.lap_pulse_default;
-    if (defaultPulse <= 0)
-    {
-        defaultPulse = 1;
-    }
+    if (defaultPulse <= 0) { defaultPulse = 1; }
 
-    /* 进度只用于显示和遥测，真正完赛仍以角点计圈为准。 */
     progress = (float)lapPulse / (float)defaultPulse;
     s_lapProgress = ECar_LimitFloat(progress, 0.0f, 0.999f);
 }
@@ -388,10 +295,6 @@ static float ECar_CalcLineTurnCmd(void)
     s_lastLineError = error;
     s_lineDError = dError;
 
-    /*
-     * 原始 error 是 -350~350。
-     * line_kp / line_kd 建议按 cm/s 差速来调。
-     */
     turn = (-g_lineTurnSign) *
            (error * g_eCarParam.line_kp + dError * g_eCarParam.line_kd);
 
@@ -400,97 +303,15 @@ static float ECar_CalcLineTurnCmd(void)
                            g_eCarParam.turn_limit);
 }
 
-static float ECar_CalcSearchTurnCmd(void)
-{
-    float sign;
-
-    /* 丢线搜索时向最近一次检测到黑线的方向偏转。 */
-    sign = (s_lastLineError >= 0.0f) ? 1.0f : -1.0f;
-    return (-g_lineTurnSign) * sign * g_eCarParam.turn_limit * 0.45f;
-}
-
 static void ECar_SetSpeedCmd(float forward, float turn)
 {
-    /* PID 层读取这里的目标：forward 为 cm/s，turn 为左右轮差速 cm/s。 */
     g_targetForwardSpeed = forward;
     g_targetTurnSpeed = turn;
     g_carEnable = 1U;
 }
 
-static uint8_t ECar_IsCornerDetected(void)
-{
-    int32_t pulse;
-    int32_t interval;
-    uint8_t cornerBlackCountTh;
-
-    cornerBlackCountTh = g_eCarParam.corner_black_count_th;
-    if (cornerBlackCountTh == 0U || cornerBlackCountTh > 8U)
-    {
-        cornerBlackCountTh = 5U;
-    }
-
-    if (g_lineBlackCount < cornerBlackCountTh)
-    {
-        return 0U;
-    }
-
-    if (g_lineCornerMaskStableCount < ECAR_CORNER_CONFIRM_COUNT)
-    {
-        return 0U;
-    }
-
-    pulse = ECar_GetForwardPulse();
-    interval = pulse - s_lastCornerForwardPulse;
-    if (s_cornerCount > 0U)
-    {
-        if (interval < g_eCarParam.min_corner_interval_pulse)
-        {
-            return 0U;
-        }
-    }
-
-    return 1U;
-}
-
-static uint8_t ECar_IsStableLineAfterCorner(void)
-{
-    uint8_t blackCount;
-
-    if (!g_lineValid)
-    {
-        /* 角点后恢复要求重新看到窄且连续的正常黑线，而不是角点黑块。 */
-        return 0U;
-    }
-
-    blackCount = g_lineBlackCount;
-    if (blackCount == 0U)
-    {
-        return 0U;
-    }
-    if (blackCount > g_eCarParam.corner_black_count_th)
-    {
-        return 0U;
-    }
-
-    return 1U;
-}
-
-static uint8_t ECar_IsCornerExitErrorOk(void)
-{
-    int16_t err;
-
-    err = g_lineError;
-    if (err < 0)
-    {
-        err = (int16_t)(-err);
-    }
-
-    return (err <= 220) ? 1U : 0U;
-}
-
 static void ECar_EnterFault(uint8_t faultCode)
 {
-    /* 进入故障状态时先停车，再记录故障码并提示。 */
     s_faultCode = faultCode;
     ECar_SafeStop();
     ECar_SetState(E_CAR_FAULT);
@@ -499,90 +320,91 @@ static void ECar_EnterFault(uint8_t faultCode)
 
 static void ECar_EnterFinish(void)
 {
-    /* 完赛状态保持停车，并将显示进度置为接近 100%。 */
     s_lapProgress = 0.999f;
     ECar_SafeStop();
     ECar_SetState(E_CAR_FINISH);
     ECar_PromptStart(600U);
 }
 
-static void ECar_EnterRecover(void)
+/* ---- new corner detection utilities ---- */
+
+static uint8_t ECar_IsAllWhiteLost(void)
 {
-    /* 角点转向后进入恢复状态，等待稳定普通黑线。 */
-    s_lostMs = 0U;
-    s_recoverStableMsCount = 0U;
-    App_Control_ResetPID();
-    s_lineDerivResetPending = 1U;
-    ECar_SetState(E_CAR_LINE_RECOVER);
+    return (g_lineBlackCount == 0U && g_lineMask == 0U) ? 1U : 0U;
 }
+
+static int32_t ECar_GetCurrentSidePulse(void)
+{
+    int32_t pulse;
+
+    pulse = ECar_GetForwardPulse() - s_lastCornerForwardPulse;
+    if (pulse < 0) { pulse = -pulse; }
+
+    return pulse;
+}
+
+static uint8_t ECar_IsCornerAllowedByDistance(void)
+{
+    if (s_cornerCount == 0U) { return 1U; }
+
+    return (ECar_GetCurrentSidePulse() >= ECAR_CORNER_MIN_STRAIGHT_PULSE) ? 1U : 0U;
+}
+
+/* ---- state handlers ---- */
 
 static void ECar_HandleLineRun(void)
 {
     float turnCmd;
     float speedCmd;
 
-    if (g_lineValid)
-    {
-        s_lostMs = 0U;
-        turnCmd = ECar_CalcLineTurnCmd();
-        speedCmd = ECar_CalcAdaptiveBaseSpeed((float)g_lineError, s_lineDError);
-
-        {
-            int16_t errAbs;
-
-            errAbs = g_lineError;
-            if (errAbs < 0)
-            {
-                errAbs = (int16_t)(-errAbs);
-            }
-
-            if (errAbs >= ECAR_LINE_STRONG_ERR_TH)
-            {
-                speedCmd = ECAR_LINE_STRONG_SPEED_CMPS;
-
-                if (turnCmd > ECAR_LINE_STRONG_TURN_CMPS)
-                {
-                    turnCmd = ECAR_LINE_STRONG_TURN_CMPS;
-                }
-                else if (turnCmd < -ECAR_LINE_STRONG_TURN_CMPS)
-                {
-                    turnCmd = -ECAR_LINE_STRONG_TURN_CMPS;
-                }
-            }
-        }
-    }
-    else
+    if (ECar_IsAllWhiteLost())
     {
         if (s_lostMs < 60000U)
         {
             s_lostMs += E_CAR_CONTROL_PERIOD_MS;
         }
 
-        if (s_lostMs >= g_eCarParam.lost_timeout_ms)
+        if (s_lostMs >= ECAR_LINE_LOST_FAULT_MS)
         {
-            if (s_cornerCount > 0U)
-            {
-                int32_t interval;
+            ECar_EnterFault(E_CAR_FAULT_LINE_LOST);
+            return;
+        }
 
-                interval = ECar_GetForwardPulse() - s_lastCornerForwardPulse;
-                if (interval < 0)
-                {
-                    interval = -interval;
-                }
-
-                if (interval < g_eCarParam.min_corner_interval_pulse)
-                {
-                    ECar_EnterRecover();
-                    return;
-                }
-            }
-
+        if (ECar_IsCornerAllowedByDistance() &&
+            s_lostMs >= ECAR_CORNER_LOST_CONFIRM_MS)
+        {
             ECar_SetState(E_CAR_CORNER_ENTER);
             return;
         }
 
-        turnCmd = 0.0f;
-        speedCmd = g_eCarParam.recover_speed;
+        ECar_SetSpeedCmd(g_eCarParam.recover_speed, 0.0f);
+        return;
+    }
+
+    s_lostMs = 0U;
+
+    turnCmd = ECar_CalcLineTurnCmd();
+    speedCmd = ECar_CalcAdaptiveBaseSpeed((float)g_lineError, s_lineDError);
+
+    {
+        int16_t errAbs;
+
+        errAbs = g_lineError;
+        if (errAbs < 0) { errAbs = (int16_t)(-errAbs); }
+
+        if (errAbs >= ECAR_LINE_STRONG_ERR_TH)
+        {
+            speedCmd = ECAR_LINE_STRONG_SPEED_CMPS;
+
+            if (turnCmd > ECAR_LINE_STRONG_TURN_CMPS)
+            {
+                turnCmd = ECAR_LINE_STRONG_TURN_CMPS;
+            }
+            else if (turnCmd < -ECAR_LINE_STRONG_TURN_CMPS)
+            {
+                turnCmd = -ECAR_LINE_STRONG_TURN_CMPS;
+            }
+        }
     }
 
     ECar_SetSpeedCmd(speedCmd, turnCmd);
@@ -593,21 +415,12 @@ static void ECar_HandleCornerEnter(void)
     int32_t pulse;
 
     pulse = ECar_GetForwardPulse();
-    s_lastCornerForwardPulse = pulse;
-    s_cornerTurnStartPulse = g_turnEncoderTotal;
-    s_cornerCenterLineCount = 0U;
 
-    if (s_cornerCount < 250U)
-    {
-        s_cornerCount++;
-    }
+    if (s_cornerCount < 250U) { s_cornerCount++; }
 
     if ((s_cornerCount % 4U) == 0U)
     {
-        if (s_lapCount < 250U)
-        {
-            s_lapCount++;
-        }
+        if (s_lapCount < 250U) { s_lapCount++; }
 
         if (s_lapCount >= s_targetLap)
         {
@@ -620,152 +433,37 @@ static void ECar_HandleCornerEnter(void)
         s_lapProgress = 0.0f;
     }
 
+    s_lastCornerForwardPulse = pulse;
+    s_cornerTurnStartPulse = g_turnEncoderTotal;
+
     s_lostMs = 0U;
-    s_recoverStableMsCount = 0U;
     App_Control_ResetPID();
     s_lineDerivResetPending = 1U;
     ECar_SetState(E_CAR_CORNER_TURN);
 }
 
-static uint8_t ECar_CountBits8(uint8_t value)
-{
-    uint8_t count = 0U;
-    while (value != 0U)
-    {
-        count += (uint8_t)(value & 0x01U);
-        value >>= 1U;
-    }
-    return count;
-}
-
-static uint8_t ECar_IsCenterLineCaught(void)
-{
-    uint8_t cornerBlackCountTh;
-
-    cornerBlackCountTh = g_eCarParam.corner_black_count_th;
-    if (cornerBlackCountTh == 0U || cornerBlackCountTh > 8U)
-    {
-        cornerBlackCountTh = 5U;
-    }
-
-    if (!g_lineValid)
-    {
-        return 0U;
-    }
-
-    if (g_lineBlackCount >= cornerBlackCountTh)
-    {
-        return 0U;
-    }
-
-    if (ECar_CountBits8((uint8_t)(g_lineMask & ECAR_CORNER_CENTER_MASK)) < ECAR_CORNER_CENTER_MIN_BLACK_COUNT)
-    {
-        return 0U;
-    }
-
-    return 1U;
-}
-
 static void ECar_HandleCornerTurn(void)
 {
-    int32_t turnPulse;
     int32_t turnDelta;
     float turnCmd;
 
-    turnPulse = g_turnEncoderTotal;
-    turnDelta = (turnPulse >= s_cornerTurnStartPulse)
-                ? (turnPulse - s_cornerTurnStartPulse)
-                : (s_cornerTurnStartPulse - turnPulse);
+    turnDelta = g_turnEncoderTotal - s_cornerTurnStartPulse;
+    if (turnDelta < 0) { turnDelta = -turnDelta; }
 
-    turnCmd = g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN;
-    ECar_SetSpeedCmd(0.0f, turnCmd);
-
-    if (s_stateMs >= g_eCarParam.corner_min_turn_ms
-        && turnDelta >= (int32_t)g_eCarParam.corner_center_min_turn_pulse
-        && ECar_IsStableLineAfterCorner()
-        && ECar_IsCornerExitErrorOk())
-    {
-        if (s_cornerCenterLineCount < 255U)
-        {
-            s_cornerCenterLineCount++;
-        }
-        if (s_cornerCenterLineCount >= ECAR_CORNER_ARC_CONFIRM_COUNT)
-        {
-            App_Control_ResetPID();
-            s_lineDerivResetPending = 1U;
-            s_cornerCenterLineCount = 0U;
-            s_lostMs = 0U;
-            s_recoverStableMsCount = 0U;
-            ECar_SetState(E_CAR_LINE_RUN);
-            return;
-        }
-    }
-    else
-    {
-        s_cornerCenterLineCount = 0U;
-    }
-
-    if (s_stateMs >= g_eCarParam.corner_max_turn_ms)
+    if (turnDelta >= (int32_t)g_eCarParam.corner_turn_pulse)
     {
         App_Control_ResetPID();
         s_lineDerivResetPending = 1U;
-        s_cornerCenterLineCount = 0U;
         s_lostMs = 0U;
-        s_recoverStableMsCount = 0U;
         ECar_SetState(E_CAR_LINE_RUN);
         return;
     }
+
+    turnCmd = g_eCarParam.corner_turn_speed * E_CAR_TURN_SIGN;
+    ECar_SetSpeedCmd(0.0f, turnCmd);
 }
 
-
-static void ECar_HandleRecover(void)
-{
-    float turnCmd;
-
-    if (ECar_IsStableLineAfterCorner())
-    {
-        s_lostMs = 0U;
-        turnCmd = ECar_CalcLineTurnCmd();
-        ECar_SetSpeedCmd(g_eCarParam.recover_speed, turnCmd);
-
-        if (s_recoverStableMsCount < 60000U)
-        {
-            s_recoverStableMsCount += E_CAR_CONTROL_PERIOD_MS;
-        }
-
-        if (s_recoverStableMsCount >= g_eCarParam.recover_stable_ms)
-        {
-            App_Control_ResetPID();
-            s_lineDerivResetPending = 1U;
-            s_recoverStableMsCount = 0U;
-            ECar_SetState(E_CAR_LINE_RUN);
-            return;
-        }
-    }
-    else
-    {
-        s_recoverStableMsCount = 0U;
-
-        if (s_lostMs < 60000U)
-        {
-            s_lostMs += E_CAR_CONTROL_PERIOD_MS;
-        }
-
-        if (s_lostMs >= ECAR_RECOVER_LOST_TIMEOUT_MS)
-        {
-            ECar_EnterFault(E_CAR_FAULT_RECOVER_TIMEOUT);
-            return;
-        }
-
-        turnCmd = ECar_CalcSearchTurnCmd();
-        ECar_SetSpeedCmd(0.0f, turnCmd);
-    }
-
-    if (s_stateMs >= ECAR_RECOVER_TOTAL_TIMEOUT_MS)
-    {
-        ECar_EnterFault(E_CAR_FAULT_RECOVER_TIMEOUT);
-    }
-}
+/* ---- public interface ---- */
 
 void ECar_Init(void)
 {
@@ -786,18 +484,10 @@ void ECar_Reset(void)
 
 void ECar_Start(void)
 {
-    /* 启动状态机前先限制目标圈数范围。 */
-    if (s_targetLap < E_CAR_TARGET_LAP_MIN)
-    {
-        s_targetLap = E_CAR_TARGET_LAP_MIN;
-    }
-    if (s_targetLap > E_CAR_TARGET_LAP_MAX)
-    {
-        s_targetLap = E_CAR_TARGET_LAP_MAX;
-    }
+    if (s_targetLap < E_CAR_TARGET_LAP_MIN) { s_targetLap = E_CAR_TARGET_LAP_MIN; }
+    if (s_targetLap > E_CAR_TARGET_LAP_MAX) { s_targetLap = E_CAR_TARGET_LAP_MAX; }
 
 #if ECAR_BOARD_TEST_MODE
-    /* 板级测试模式下，启动命令不会进入自动循迹运行。 */
     ECar_SyncLineParams();
     ECar_SafeStop();
     ECar_ResetRunData();
@@ -828,7 +518,6 @@ void ECar_Stop(void)
 
 void ECar_Control10ms(void)
 {
-    /* 灰度读取、状态机和 PID 均在前台 10ms 任务执行，不放进定时器 ISR。 */
     ECar_SyncLineParams();
     App_Line_Update();
 
@@ -854,7 +543,6 @@ void ECar_Control10ms(void)
         case E_CAR_READY:
         case E_CAR_FINISH:
         case E_CAR_FAULT:
-            /* 非运动状态持续强制 PWM 为 0。 */
             ECar_SafeStop();
             break;
 
@@ -870,10 +558,6 @@ void ECar_Control10ms(void)
             ECar_HandleCornerTurn();
             break;
 
-        case E_CAR_LINE_RECOVER:
-            ECar_HandleRecover();
-            break;
-
         default:
             ECar_EnterFault(E_CAR_FAULT_LINE_LOST);
             break;
@@ -887,21 +571,14 @@ void ECar_KeyProcess(void)
     uint8_t key;
 
     key = Key_GetNum();
-    if (key == 0U)
-    {
-        return;
-    }
+    if (key == 0U) { return; }
 
     if (key == 1U)
     {
-        /* K1：仅在非运动状态下循环选择目标圈数。 */
         if (!ECar_IsMotionState(s_state) && s_state != E_CAR_FAULT)
         {
             s_targetLap++;
-            if (s_targetLap > E_CAR_TARGET_LAP_MAX)
-            {
-                s_targetLap = E_CAR_TARGET_LAP_MIN;
-            }
+            if (s_targetLap > E_CAR_TARGET_LAP_MAX) { s_targetLap = E_CAR_TARGET_LAP_MIN; }
             ECar_SafeStop();
             ECar_SetState(E_CAR_READY);
             LED_User_BlinkTimes(s_targetLap, 500U);
@@ -911,7 +588,6 @@ void ECar_KeyProcess(void)
 
     if (key == 2U)
     {
-        /* K2：仅在非运动、非故障状态下启动。 */
         if (!ECar_IsMotionState(s_state) && s_state != E_CAR_FAULT)
         {
             ECar_Start();
@@ -921,14 +597,12 @@ void ECar_KeyProcess(void)
 
     if (key == 3U)
     {
-        /* K3：本地停车。 */
         ECar_Stop();
         return;
     }
 
     if (key == 4U)
     {
-        /* K4：故障时复位；非故障时停车并回到 IDLE。 */
         if (s_state == E_CAR_FAULT)
         {
             ECar_Reset();
@@ -953,37 +627,19 @@ void ECar_ShowStatus(void)
     {
         OLED_Clear();
         OLED_ShowString(0, 0, "E-Car MSPM0", OLED_8X16);
-#if BOARD_OLED_USE_H8_SPI
-        OLED_ShowString(0, 16, "OLED H8 SPI", OLED_8X16);
-        OLED_ShowString(0, 32, "SCL PB9 SDA PB8", OLED_8X16);
-#elif BOARD_OLED_USE_H8_I2C
         OLED_ShowString(0, 16, "OLED H8 I2C", OLED_8X16);
         OLED_ShowString(0, 32, "SCL PB9 SDA PB8", OLED_8X16);
-#else
-        OLED_ShowString(0, 16, "OLED I2C OK", OLED_8X16);
-        OLED_ShowString(0, 32, "SCL PA1 SDA PA0", OLED_8X16);
-#endif
         OLED_ShowString(0, 48, "Motor OFF", OLED_8X16);
         OLED_Update();
         return;
     }
 
-    /* 限制显示数值范围，避免 OLED 小字段溢出。 */
     progressPercent = (uint8_t)(s_lapProgress * 100.0f);
-    if (progressPercent > 99U)
-    {
-        progressPercent = 99U;
-    }
+    if (progressPercent > 99U) { progressPercent = 99U; }
 
     lineErr = (int32_t)g_lineError;
-    if (lineErr > 999)
-    {
-        lineErr = 999;
-    }
-    if (lineErr < -999)
-    {
-        lineErr = -999;
-    }
+    if (lineErr > 999)  { lineErr = 999; }
+    if (lineErr < -999) { lineErr = -999; }
 
     OLED_Clear();
     OLED_ShowString(0, 0, "E CAR", OLED_8X16);
@@ -1008,37 +664,15 @@ void ECar_ShowStatus(void)
     OLED_Update();
 }
 
-float ECar_GetLapProgress(void)
-{
-    return s_lapProgress;
-}
-
-uint8_t ECar_GetLapCount(void)
-{
-    return s_lapCount;
-}
-
-uint8_t ECar_GetTargetLap(void)
-{
-    return s_targetLap;
-}
-
-ECarState_t ECar_GetState(void)
-{
-    return s_state;
-}
+float ECar_GetLapProgress(void)   { return s_lapProgress; }
+uint8_t ECar_GetLapCount(void)    { return s_lapCount; }
+uint8_t ECar_GetTargetLap(void)   { return s_targetLap; }
+ECarState_t ECar_GetState(void)   { return s_state; }
 
 uint8_t ECar_SetTargetLap(uint8_t lap)
 {
-    if (lap < E_CAR_TARGET_LAP_MIN || lap > E_CAR_TARGET_LAP_MAX)
-    {
-        return 0U;
-    }
-
-    if (ECar_IsMotionState(s_state))
-    {
-        return 0U;
-    }
+    if (lap < E_CAR_TARGET_LAP_MIN || lap > E_CAR_TARGET_LAP_MAX) { return 0U; }
+    if (ECar_IsMotionState(s_state)) { return 0U; }
 
     s_targetLap = lap;
     if (s_state != E_CAR_FAULT)
@@ -1046,21 +680,9 @@ uint8_t ECar_SetTargetLap(uint8_t lap)
         ECar_SafeStop();
         ECar_SetState(E_CAR_READY);
     }
-
     return 1U;
 }
 
-uint8_t ECar_GetCornerCount(void)
-{
-    return s_cornerCount;
-}
-
-uint8_t ECar_GetFaultCode(void)
-{
-    return s_faultCode;
-}
-
-uint32_t ECar_GetRunningTimeMs(void)
-{
-    return s_runningTimeMs;
-}
+uint8_t ECar_GetCornerCount(void)  { return s_cornerCount; }
+uint8_t ECar_GetFaultCode(void)    { return s_faultCode; }
+uint32_t ECar_GetRunningTimeMs(void) { return s_runningTimeMs; }
