@@ -78,7 +78,7 @@
  * triggers corner. From the second corner onward, the current side must
  * exceed MIN_STRAIGHT_CM before all-white is recognized as a corner.
  */
-#define ECAR_CORNER_ADVANCE_CM                  4.0f
+#define ECAR_CORNER_ADVANCE_CM                  3.0f
 #define ECAR_CORNER_MIN_STRAIGHT_CM             80.0f
 #define ECAR_CORNER_LOST_CONFIRM_MS             100U
 #define ECAR_LINE_LOST_FAULT_MS                 2500U
