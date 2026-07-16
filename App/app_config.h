@@ -78,7 +78,7 @@
  * triggers corner. From the second corner onward, the current side must
  * exceed MIN_STRAIGHT_CM before all-white is recognized as a corner.
  */
-#define ECAR_CORNER_ADVANCE_CM                  5.0f
+#define ECAR_CORNER_ADVANCE_CM                  4.0f
 #define ECAR_CORNER_MIN_STRAIGHT_CM             80.0f
 #define ECAR_CORNER_LOST_CONFIRM_MS             100U
 #define ECAR_LINE_LOST_FAULT_MS                 2500U
@@ -92,7 +92,7 @@
 
 /* Conservative first-run speed defaults, in cm/s. */
 #define ECAR_DEFAULT_BASE_SPEED_CMPS            55.0f
-#define ECAR_DEFAULT_RECOVER_SPEED_CMPS         6.0f
+#define ECAR_DEFAULT_RECOVER_SPEED_CMPS         10.0f
 #define ECAR_DEFAULT_CORNER_FORWARD_CMPS        10.0f
 #define ECAR_DEFAULT_CORNER_TURN_CMPS           12.0f
 #define ECAR_DEFAULT_TURN_LIMIT_CMPS            8.0f
