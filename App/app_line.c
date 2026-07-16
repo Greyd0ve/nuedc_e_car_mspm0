@@ -8,7 +8,7 @@
  * 若传感器物理方向装反，可通过 g_lineReverseOrderF 反转逻辑顺序，无需改线。
  */
 #ifndef GRAYSCALE_CHANNELS
-#define GRAYSCALE_CHANNELS 8U /* 灰度传感器通道数，默认 8 路 */
+#define GRAYSCALE_CHANNELS 8U
 #endif
 
 extern volatile float g_lineBlackLevelF;
@@ -26,7 +26,6 @@ extern volatile uint8_t g_lineRawMask;
 extern volatile uint8_t g_lineBlackCount;
 extern volatile uint8_t g_lineBadMaskCount;
 extern volatile uint8_t g_lineZeroMaskCount;
-extern volatile uint8_t g_lineCornerMaskStableCount;
 extern volatile int8_t g_lastLineDir;
 extern volatile uint16_t g_lineLostMs;
 
@@ -36,9 +35,7 @@ static int16_t s_lastValidError = 0;
 static uint8_t s_hasValidError = 0U;
 static uint8_t s_badMaskCount = 0U;
 static uint8_t s_zeroMaskCount = 0U;
-static uint8_t s_cornerMaskStableCount = 0U;
 
-/* 对串口调参后的滤波/转向参数做范围限制。 */
 static float App_Line_LimitFloat(float value, float minVal, float maxVal)
 {
     if (value < minVal) return minVal;
@@ -46,52 +43,8 @@ static float App_Line_LimitFloat(float value, float minVal, float maxVal)
     return value;
 }
 
-static uint8_t App_Line_IsContinuousMask(uint8_t mask, uint8_t blackCount)
-{
-    uint8_t first = 0U;
-    uint16_t expected;
-
-    if (blackCount == 0U || blackCount > GRAYSCALE_CHANNELS)
-    {
-        return 0U;
-    }
-
-    while (first < GRAYSCALE_CHANNELS && (mask & (uint8_t)(1U << first)) == 0U)
-    {
-        first++;
-    }
-
-    if ((uint16_t)first + (uint16_t)blackCount > GRAYSCALE_CHANNELS)
-    {
-        return 0U;
-    }
-
-    expected = (uint16_t)(((uint16_t)1U << blackCount) - 1U);
-    expected = (uint16_t)(expected << first);
-
-    return (uint8_t)(((uint16_t)mask == expected) ? 1U : 0U);
-}
-
-static uint8_t App_Line_FillOneBitGap(uint8_t mask)
-{
-    uint8_t i;
-
-    for (i = 1U; i < 7U; i++)
-    {
-        if (((mask & (uint8_t)(1U << i)) == 0U) &&
-            ((mask & (uint8_t)(1U << (i - 1U))) != 0U) &&
-            ((mask & (uint8_t)(1U << (i + 1U))) != 0U))
-        {
-            mask |= (uint8_t)(1U << i);
-        }
-    }
-
-    return mask;
-}
-
 static void App_Line_HoldLastError(void)
 {
-    /* 短暂无效 mask 时保持上一次有效误差，避免转向命令突变。 */
     g_lineError = s_lastValidError;
 }
 
@@ -102,25 +55,21 @@ void App_Line_GPIOForceInit(void)
 
 void App_Line_ResetState(void)
 {
-    /* 新一轮运行前同时清空公开遥测量和内部滤波状态。 */
     g_lineLostMs = 0;
     g_lineBlackCount = 0U;
     g_lineBadMaskCount = 0U;
     g_lineZeroMaskCount = 0U;
-    g_lineCornerMaskStableCount = 0U;
     g_lineErrorFiltered = 0.0f;
     g_lineLastCtrlError = 0.0f;
     s_lastValidError = 0;
     s_hasValidError = 0U;
     s_badMaskCount = 0U;
     s_zeroMaskCount = 0U;
-    s_cornerMaskStableCount = 0U;
 }
 
 void App_Line_Update(void)
 {
     uint8_t raw[GRAYSCALE_CHANNELS];
-    /* 传感器权重以中心为 0，正值表示黑线偏右。 */
     static const int16_t weight[GRAYSCALE_CHANNELS] = {-400, -280, -160, -60, 60, 160, 280, 400};
     int32_t sum = 0;
     int16_t count = 0;
@@ -128,20 +77,12 @@ void App_Line_Update(void)
     uint8_t i;
     uint8_t blackLevel;
     uint8_t reverseOrder;
-    uint8_t cornerBlackCountTh;
-    uint8_t continuous;
 
     blackLevel = (g_lineBlackLevelF <= 0.5f) ? 0U : 1U;
     reverseOrder = (g_lineReverseOrderF <= 0.5f) ? 0U : 1U;
-    cornerBlackCountTh = g_eCarParam.corner_black_count_th;
-    if (cornerBlackCountTh == 0U || cornerBlackCountTh > GRAYSCALE_CHANNELS)
-    {
-        cornerBlackCountTh = 5U;
-    }
 
     Grayscale_ReadAll(raw);
 
-    /* rawMask 保留物理通道顺序，方便板级测试确认接线。 */
     g_lineRawMask = 0;
     for (i = 0; i < GRAYSCALE_CHANNELS; i++)
     {
@@ -153,7 +94,6 @@ void App_Line_Update(void)
         uint8_t physicalIndex;
         uint8_t isBlack;
 
-        /* lineMask 是转向控制使用的逻辑顺序，可按配置反转。 */
         physicalIndex = reverseOrder ? (uint8_t)(GRAYSCALE_CHANNELS - 1U - i) : i;
         isBlack = (raw[physicalIndex] == blackLevel) ? 1U : 0U;
 
@@ -167,44 +107,6 @@ void App_Line_Update(void)
 
     g_lineMask = mask;
     g_lineBlackCount = (uint8_t)count;
-    continuous = App_Line_IsContinuousMask(mask, (uint8_t)count);
-
-    if (count > 0 && (uint8_t)count < cornerBlackCountTh && !continuous)
-    {
-        uint8_t correctedMask;
-
-        correctedMask = App_Line_FillOneBitGap(mask);
-        if (correctedMask != mask)
-        {
-            uint8_t j;
-            uint8_t correctedCount;
-            int32_t correctedSum;
-
-            correctedCount = 0U;
-            correctedSum = 0;
-            for (j = 0; j < GRAYSCALE_CHANNELS; j++)
-            {
-                if (correctedMask & (uint8_t)(1U << j))
-                {
-                    correctedCount++;
-                    correctedSum += weight[j];
-                }
-            }
-
-            if (correctedCount < cornerBlackCountTh)
-            {
-                if (App_Line_IsContinuousMask(correctedMask, correctedCount))
-                {
-                    mask = correctedMask;
-                    count = (int16_t)correctedCount;
-                    sum = correctedSum;
-                    g_lineMask = correctedMask;
-                    g_lineBlackCount = correctedCount;
-                    continuous = 1U;
-                }
-            }
-        }
-    }
 
     if (count == 0)
     {
@@ -215,7 +117,6 @@ void App_Line_Update(void)
         {
             g_lineLostMs = (uint16_t)(g_lineLostMs + ECAR_CONTROL_PERIOD_MS);
         }
-        s_cornerMaskStableCount = 0U;
     }
     else
     {
@@ -240,29 +141,12 @@ void App_Line_Update(void)
         g_lineValid = 1U;
         g_lastLineDir = (g_lineError >= 0) ? 1 : -1;
         g_lineLostMs = 0U;
-
-        if ((uint8_t)count >= cornerBlackCountTh)
-        {
-            if (s_cornerMaskStableCount < 255U) s_cornerMaskStableCount++;
-            s_zeroMaskCount = 0U;
-        }
-        else if (continuous)
-        {
-            s_zeroMaskCount = 0U;
-            s_cornerMaskStableCount = 0U;
-            s_badMaskCount = (uint8_t)(s_badMaskCount / 2U);
-        }
-        else
-        {
-            if (s_badMaskCount < 255U) s_badMaskCount++;
-            s_zeroMaskCount = 0U;
-            s_cornerMaskStableCount = 0U;
-        }
+        s_zeroMaskCount = 0U;
+        s_badMaskCount = (uint8_t)(s_badMaskCount / 2U);
     }
 
     g_lineBadMaskCount = s_badMaskCount;
     g_lineZeroMaskCount = s_zeroMaskCount;
-    g_lineCornerMaskStableCount = s_cornerMaskStableCount;
 }
 
 float App_Line_CalcTurnCmd(void)
@@ -275,7 +159,6 @@ float App_Line_CalcTurnCmd(void)
     dError = error - g_lineLastCtrlError;
     g_lineLastCtrlError = error;
 
-    /* PD 转向辅助函数，供未直接使用完整 E 题状态机的模块调用。 */
     turn = (-g_lineTurnSign) * (error * g_lineKp + dError * g_lineKd);
 
     return App_Line_LimitFloat(turn, -g_lineTurnLimit, g_lineTurnLimit);

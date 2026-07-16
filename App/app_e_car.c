@@ -101,7 +101,6 @@ volatile uint8_t g_lineRawMask = 0U;
 volatile uint8_t g_lineBlackCount = 0U;
 volatile uint8_t g_lineBadMaskCount = 0U;
 volatile uint8_t g_lineZeroMaskCount = 0U;
-volatile uint8_t g_lineCornerMaskStableCount = 0U;
 volatile int8_t g_lastLineDir = 1;
 volatile uint16_t g_lineLostMs = 0U;
 
@@ -229,7 +228,6 @@ static void ECar_ResetLineState(void)
     g_lineBlackCount = 0U;
     g_lineBadMaskCount = 0U;
     g_lineZeroMaskCount = 0U;
-    g_lineCornerMaskStableCount = 0U;
     g_lastLineDir = 1;
     g_lineLostMs = 0U;
     s_lastLineError = 0.0f;

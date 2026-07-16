@@ -11,7 +11,6 @@ extern volatile uint8_t g_lineRawMask;
 extern volatile uint8_t g_lineBlackCount;
 extern volatile uint8_t g_lineBadMaskCount;
 extern volatile uint8_t g_lineZeroMaskCount;
-extern volatile uint8_t g_lineCornerMaskStableCount;
 extern volatile uint16_t g_lineLostMs;
 
 /* 重新初始化灰度 GPIO 层，用于应用启动时强制刷新硬件状态。 */
