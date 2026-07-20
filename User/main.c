@@ -152,18 +152,21 @@ static void Main_PrintVisualGimbalDebug500ms(void)
     VisualGimbal_GetDebug(&vg);
     AimLink_GetProtocolStats(&stats);
 
-    Serial_Printf("[vgx,state,%u,seq,%u,err,%d,dir,%d,pulse,%lu,pos,%ld,busy,%u,cmd,%lu,dead,%lu,invalid,%lu,limit,%lu,crc,%lu,field,%lu,guard,%lu,ovf,%lu]\r\n",
+    Serial_Printf("[vgx,state,%u,seq,%u,err,%s%d,dir,%d,pulse,%lu,freq,%lu,pos,%ld,busy,%u,cmd,%lu,dead,%lu,invalid,%lu,limit,%lu,busySkip,%lu,crc,%lu,field,%lu,guard,%lu,ovf,%lu]\r\n",
         (unsigned int)vg.state,
         (unsigned int)vg.sequence,
+        (vg.errorValid) ? "" : "NA",
         (int)vg.errorX,
         (int)vg.direction,
         (unsigned long)vg.commandPulses,
+        (unsigned long)vg.frequencyHz,
         (long)vg.estimatedPositionPulses,
         (unsigned int)GimbalStepper_IsBusy(GIMBAL_AXIS_X),
         (unsigned long)vg.acceptedCommands,
         (unsigned long)vg.deadbandFrames,
         (unsigned long)vg.invalidFrames,
         (unsigned long)vg.limitRejects,
+        (unsigned long)vg.busySkips,
         (unsigned long)stats.crcErrors,
         (unsigned long)stats.fieldErrors,
         (unsigned long)stats.parserGuardResets,
@@ -236,12 +239,12 @@ int main(void)
     OLED_Clear();
 #endif
 
-#if ECAR_IMU_ENABLE && !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE
+#if ECAR_IMU_ENABLE && !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE && !ECAR_VISUAL_GIMBAL_X_TEST_MODE
     IMU_Init();
 #endif
 
-#if ECAR_AIM_LINK_TEST_MODE || ECAR_GIMBAL_STEP_TEST_MODE
-    /* No additional init */
+#if ECAR_AIM_LINK_TEST_MODE || ECAR_GIMBAL_STEP_TEST_MODE || ECAR_VISUAL_GIMBAL_X_TEST_MODE
+    /* No additional init in isolated test modes */
 #elif ECAR_BOARD_TEST_MODE
     BoardTest_Init();
 #else
@@ -264,7 +267,7 @@ int main(void)
         (void)Main_TakeTaskCounterAll(&g_task_1ms_count);
 
         taskCount = Main_TakeTaskCounterAll(&g_task_5ms_count);
-#if !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE
+#if !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE && !ECAR_VISUAL_GIMBAL_X_TEST_MODE
         if (taskCount > 0U)
         {
             App_Control_UpdateEncoderSpeed((uint16_t)taskCount * ECAR_ENCODER_SPEED_PERIOD_MS);
@@ -283,7 +286,7 @@ int main(void)
 #elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
             VisualGimbal_Task10ms();
 #elif ECAR_GIMBAL_STEP_TEST_MODE
-            BoardTest_Task10ms();
+            /* No periodic car or board control */
 #else
             ECar_Control10ms();
 #endif
@@ -336,6 +339,8 @@ int main(void)
         if (Main_TakeTaskCounterAll(&g_task_200ms_count) > 0U)
         {
 #if ECAR_AIM_LINK_TEST_MODE
+            /* No 200ms task */
+#elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
             /* No 200ms task */
 #elif ECAR_GIMBAL_STEP_TEST_MODE
             /* No 200ms task */

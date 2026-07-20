@@ -147,6 +147,19 @@
  */
 #define AIM_X_ERROR_POSITIVE_DIR        1
 
+#if (AIM_X_ERROR_POSITIVE_DIR != 1) && (AIM_X_ERROR_POSITIVE_DIR != -1)
+#error "AIM_X_ERROR_POSITIVE_DIR must be 1 or -1"
+#endif
+#if (AIM_X_DEADBAND_PX < 0)
+#error "AIM_X_DEADBAND_PX must not be negative"
+#endif
+#if (AIM_X_SOFT_LIMIT_PULSES <= 0)
+#error "AIM_X_SOFT_LIMIT_PULSES must be positive"
+#endif
+#if (AIM_X_MAX_SINGLE_PULSES == 0U)
+#error "AIM_X_MAX_SINGLE_PULSES must be non-zero"
+#endif
+
 /* Stepper motor physical parameters. */
 #define GIMBAL_MOTOR_FULL_STEPS_PER_REV         200U
 #define GIMBAL_MICROSTEP                        16U

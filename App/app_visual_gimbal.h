@@ -7,9 +7,11 @@ typedef enum
 {
     VISUAL_GIMBAL_WAIT_LINK = 0,
     VISUAL_GIMBAL_WAIT_FRAME,
+    VISUAL_GIMBAL_WAIT_NEW_FRAME,
     VISUAL_GIMBAL_DEADBAND,
     VISUAL_GIMBAL_MOVING,
     VISUAL_GIMBAL_INVALID,
+    VISUAL_GIMBAL_FAULT,
     VISUAL_GIMBAL_LIMIT
 } VisualGimbalState_t;
 
@@ -18,6 +20,7 @@ typedef struct
     VisualGimbalState_t state;
     uint16_t sequence;
     int16_t  errorX;
+    uint8_t  errorValid;
     int8_t   direction;
     uint32_t commandPulses;
     uint32_t frequencyHz;

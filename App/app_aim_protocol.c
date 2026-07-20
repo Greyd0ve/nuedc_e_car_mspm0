@@ -390,21 +390,12 @@ void AimProtocol_Process(void)
                     if (AimProtocol_ValidateFrame())
                     {
                         AimProtocol_AcceptFrame();
+                        s_frameIndex = 0U;
+                        s_parseState = AIM_PARSE_WAIT_HEADER0;
                     }
                     else
                     {
                         AimProtocol_ResyncFromFailedFrame();
-                    }
-                    /*
-                     * After processing a complete frame (valid or failed),
-                     * state and frameIndex are set by AcceptFrame() or
-                     * ResyncFromFailedFrame().  If neither sets the state
-                     * (AcceptFrame does not reset), we MUST reset here.
-                     */
-                    if (s_parseState == AIM_PARSE_COLLECT)
-                    {
-                        s_frameIndex = 0U;
-                        s_parseState = AIM_PARSE_WAIT_HEADER0;
                     }
                 }
                 break;
