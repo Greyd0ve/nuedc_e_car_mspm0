@@ -341,8 +341,9 @@
 #define KEY_K4_PIN                      KEY4_PIN
 
 /* ---------------- Gimbal stepper motor pins (derived from SysConfig) ----------------
- * X STEP: PA21 / TIMA0-C0, X DIR: PB15 / GPIO, X EN: PB18 (reserved)
- * Y STEP: PA15 / TIMA1-C0, Y DIR: PB16 / GPIO, Y EN: PB25 (reserved)
+ * X STEP: PB8  / TIMA0-C0 (H1-5),  X DIR: PB15 (H1-2)
+ * Y STEP: PB5  / TIMA1-C1 (H1-1),  Y DIR: PB16 (H1-3)
+ * X EN:   PB18 (H13-2, reserved), Y EN: PB25 (H13-1, reserved)
  */
 #define GIMBAL_X_STEP_PORT              GPIO_PWM_GIMBAL_X_C0_PORT
 #define GIMBAL_X_STEP_PIN               GPIO_PWM_GIMBAL_X_C0_PIN
@@ -355,12 +356,12 @@
 #define GIMBAL_X_DIR_PIN                GPIO_GIMBAL_X_DIR_PIN
 #define GIMBAL_X_DIR_IOMUX              GPIO_GIMBAL_X_DIR_IOMUX
 
-#define GIMBAL_Y_STEP_PORT              GPIO_PWM_GIMBAL_Y_C0_PORT
-#define GIMBAL_Y_STEP_PIN               GPIO_PWM_GIMBAL_Y_C0_PIN
-#define GIMBAL_Y_STEP_IOMUX             GPIO_PWM_GIMBAL_Y_C0_IOMUX
-#define GIMBAL_Y_STEP_IOMUX_FUNC        GPIO_PWM_GIMBAL_Y_C0_IOMUX_FUNC
+#define GIMBAL_Y_STEP_PORT              GPIO_PWM_GIMBAL_Y_C1_PORT
+#define GIMBAL_Y_STEP_PIN               GPIO_PWM_GIMBAL_Y_C1_PIN
+#define GIMBAL_Y_STEP_IOMUX             GPIO_PWM_GIMBAL_Y_C1_IOMUX
+#define GIMBAL_Y_STEP_IOMUX_FUNC        GPIO_PWM_GIMBAL_Y_C1_IOMUX_FUNC
 #define GIMBAL_Y_STEP_TIMER_INST        PWM_GIMBAL_Y_INST
-#define GIMBAL_Y_STEP_CC_INDEX          GPIO_PWM_GIMBAL_Y_C0_IDX
+#define GIMBAL_Y_STEP_CC_INDEX          GPIO_PWM_GIMBAL_Y_C1_IDX
 
 #define GIMBAL_Y_DIR_PORT               GPIO_GIMBAL_PORT
 #define GIMBAL_Y_DIR_PIN                GPIO_GIMBAL_Y_DIR_PIN

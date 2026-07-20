@@ -54,8 +54,8 @@ void GimbalStepTest_KeyProcess(void)
 
     if (s_initDone == 0U) { return; }
 
-    App_CheckDone();
     App_CheckK3Emergency();
+    App_CheckDone();
 
     key = Key_GetNum();
     if (key == 0U) { return; }

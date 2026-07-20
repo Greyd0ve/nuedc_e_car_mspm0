@@ -102,10 +102,10 @@ extern "C" {
 #define PWM_GIMBAL_X_INST_INT_IRQN                              (TIMA0_INT_IRQn)
 #define PWM_GIMBAL_X_INST_CLK_FREQ                                       1000000
 /* GPIO defines for channel 0 */
-#define GPIO_PWM_GIMBAL_X_C0_PORT                                          GPIOA
-#define GPIO_PWM_GIMBAL_X_C0_PIN                                  DL_GPIO_PIN_21
-#define GPIO_PWM_GIMBAL_X_C0_IOMUX                               (IOMUX_PINCM46)
-#define GPIO_PWM_GIMBAL_X_C0_IOMUX_FUNC              IOMUX_PINCM46_PF_TIMA0_CCP0
+#define GPIO_PWM_GIMBAL_X_C0_PORT                                          GPIOB
+#define GPIO_PWM_GIMBAL_X_C0_PIN                                   DL_GPIO_PIN_8
+#define GPIO_PWM_GIMBAL_X_C0_IOMUX                               (IOMUX_PINCM25)
+#define GPIO_PWM_GIMBAL_X_C0_IOMUX_FUNC              IOMUX_PINCM25_PF_TIMA0_CCP0
 #define GPIO_PWM_GIMBAL_X_C0_IDX                             DL_TIMER_CC_0_INDEX
 
 /* Defines for PWM_GIMBAL_Y */
@@ -113,12 +113,12 @@ extern "C" {
 #define PWM_GIMBAL_Y_INST_IRQHandler                            TIMA1_IRQHandler
 #define PWM_GIMBAL_Y_INST_INT_IRQN                              (TIMA1_INT_IRQn)
 #define PWM_GIMBAL_Y_INST_CLK_FREQ                                       1000000
-/* GPIO defines for channel 0 */
-#define GPIO_PWM_GIMBAL_Y_C0_PORT                                          GPIOA
-#define GPIO_PWM_GIMBAL_Y_C0_PIN                                  DL_GPIO_PIN_15
-#define GPIO_PWM_GIMBAL_Y_C0_IOMUX                               (IOMUX_PINCM37)
-#define GPIO_PWM_GIMBAL_Y_C0_IOMUX_FUNC              IOMUX_PINCM37_PF_TIMA1_CCP0
-#define GPIO_PWM_GIMBAL_Y_C0_IDX                             DL_TIMER_CC_0_INDEX
+/* GPIO defines for channel 1 */
+#define GPIO_PWM_GIMBAL_Y_C1_PORT                                          GPIOB
+#define GPIO_PWM_GIMBAL_Y_C1_PIN                                   DL_GPIO_PIN_5
+#define GPIO_PWM_GIMBAL_Y_C1_IOMUX                               (IOMUX_PINCM18)
+#define GPIO_PWM_GIMBAL_Y_C1_IOMUX_FUNC              IOMUX_PINCM18_PF_TIMA1_CCP1
+#define GPIO_PWM_GIMBAL_Y_C1_IDX                             DL_TIMER_CC_1_INDEX
 
 
 

@@ -181,30 +181,30 @@ PWM1.PWM_CHANNEL_1.$name        = "MOTOR_C1";
 PWM1.PWM_CHANNEL_1.dutyCycle    = 0;
 
 /*
- * Gimbal X STEP: TIMA0-C0, 500Hz PWM on PA21.
- * TIMA0 is a four-CC timer. Use only CCP0 for X STEP.
+ * Gimbal X STEP: TIMA0-C0, 500Hz PWM on PB8 (H1-5).
+ * TIMA0 is a four-CC timer. Use CCP0 for X STEP.
  */
 PWM2.$name                      = "PWM_GIMBAL_X";
 PWM2.ccIndex                    = [0];
 PWM2.clockPrescale              = 32;
 PWM2.timerCount                 = 2000;
 PWM2.peripheral.$assign         = "TIMA0";
-PWM2.peripheral.ccp0Pin.$assign = "PA21";
+PWM2.peripheral.ccp0Pin.$assign = "PB8";
 PWM2.PWM_CHANNEL_0.$name        = "GIMBAL_X_C0";
 PWM2.PWM_CHANNEL_0.dutyCycle    = 0;
 
 /*
- * Gimbal Y STEP: TIMA1-C0, 500Hz PWM on PA15.
- * TIMA1 is a two-CC timer. Use CCP0 for Y STEP.
+ * Gimbal Y STEP: TIMA1-C1, 500Hz PWM on PB5 (H1-1).
+ * TIMA1 is a two-CC timer. Use CCP1 for Y STEP.
  */
 PWM3.$name                      = "PWM_GIMBAL_Y";
-PWM3.ccIndex                    = [0];
+PWM3.ccIndex                    = [1];
 PWM3.clockPrescale              = 32;
 PWM3.timerCount                 = 2000;
 PWM3.peripheral.$assign         = "TIMA1";
-PWM3.peripheral.ccp0Pin.$assign = "PA15";
-PWM3.PWM_CHANNEL_0.$name        = "GIMBAL_Y_C0";
-PWM3.PWM_CHANNEL_0.dutyCycle    = 0;
+PWM3.peripheral.ccp1Pin.$assign = "PB5";
+PWM3.PWM_CHANNEL_1.$name        = "GIMBAL_Y_C1";
+PWM3.PWM_CHANNEL_1.dutyCycle    = 0;
 
 /*
  * Gimbal DIR GPIOs: X DIR=PB15, Y DIR=PB16.
