@@ -143,7 +143,7 @@ static void Main_PrintAimDebug500ms(void)
 }
 #endif
 
-#if ECAR_VISUAL_GIMBAL_X_TEST_MODE
+#if ECAR_VISUAL_GIMBAL_DEBUG_ENABLE
 static void Main_PrintVisualGimbalDebug500ms(void)
 {
     VisualGimbalDebug_t vg;
@@ -152,25 +152,41 @@ static void Main_PrintVisualGimbalDebug500ms(void)
     VisualGimbal_GetDebug(&vg);
     AimLink_GetProtocolStats(&stats);
 
-    Serial_Printf("[vgx,state,%u,seq,%u,err,%s%d,dir,%d,pulse,%lu,freq,%lu,pos,%ld,busy,%u,cmd,%lu,dead,%lu,invalid,%lu,limit,%lu,busySkip,%lu,crc,%lu,field,%lu,guard,%lu,ovf,%lu]\r\n",
-        (unsigned int)vg.state,
-        (unsigned int)vg.sequence,
-        (vg.errorValid) ? "" : "NA",
-        (int)vg.errorX,
-        (int)vg.direction,
-        (unsigned long)vg.commandPulses,
-        (unsigned long)vg.frequencyHz,
-        (long)vg.estimatedPositionPulses,
-        (unsigned int)GimbalStepper_IsBusy(GIMBAL_AXIS_X),
-        (unsigned long)vg.acceptedCommands,
-        (unsigned long)vg.deadbandFrames,
-        (unsigned long)vg.invalidFrames,
-        (unsigned long)vg.limitRejects,
-        (unsigned long)vg.busySkips,
-        (unsigned long)stats.crcErrors,
-        (unsigned long)stats.fieldErrors,
-        (unsigned long)stats.parserGuardResets,
-        (unsigned long)K230Uart_GetOverflowCount());
+    if (vg.errorValid)
+    {
+        Serial_Printf("[vgx,state,%u,seq,%u,err,%d,filt,%d,dir,%d,pulse,%lu,freq,%lu,pos,%ld,busy,%u,cmd,%u,locked,%u,lockCnt,%u,fault,%u,posOk,%u,ovf,%lu]\r\n",
+            (unsigned int)vg.state,
+            (unsigned int)vg.sequence,
+            (int)vg.rawErrorX,
+            (int)vg.filteredErrorX,
+            (int)vg.direction,
+            (unsigned long)vg.commandPulses,
+            (unsigned long)vg.frequencyHz,
+            (long)vg.estimatedPositionPulses,
+            (unsigned int)GimbalStepper_IsBusy(GIMBAL_AXIS_X),
+            (unsigned int)vg.commandAccepted,
+            (unsigned int)vg.locked,
+            (unsigned int)vg.lockConfirmCount,
+            (unsigned int)vg.faultLatched,
+            (unsigned int)vg.positionValid,
+            (unsigned long)K230Uart_GetOverflowCount());
+    }
+    else
+    {
+        Serial_Printf("[vgx,state,%u,seq,%u,err,NA,dir,%d,pulse,%lu,freq,%lu,pos,%ld,busy,%u,cmd,%u,locked,%u,fault,%u,posOk,%u,ovf,%lu]\r\n",
+            (unsigned int)vg.state,
+            (unsigned int)vg.sequence,
+            (int)vg.direction,
+            (unsigned long)vg.commandPulses,
+            (unsigned long)vg.frequencyHz,
+            (long)vg.estimatedPositionPulses,
+            (unsigned int)GimbalStepper_IsBusy(GIMBAL_AXIS_X),
+            (unsigned int)vg.commandAccepted,
+            (unsigned int)vg.locked,
+            (unsigned int)vg.faultLatched,
+            (unsigned int)vg.positionValid,
+            (unsigned long)K230Uart_GetOverflowCount());
+    }
 }
 #endif
 
@@ -318,6 +334,7 @@ int main(void)
                 }
             }
 #elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
+#if ECAR_VISUAL_GIMBAL_DEBUG_ENABLE
             {
                 static uint8_t vgPrintDivider = 0U;
                 vgPrintDivider++;
@@ -327,6 +344,7 @@ int main(void)
                     Main_PrintVisualGimbalDebug500ms();
                 }
             }
+#endif
 #elif ECAR_GIMBAL_STEP_TEST_MODE
             /* No 100ms task */
 #elif ECAR_BOARD_TEST_MODE

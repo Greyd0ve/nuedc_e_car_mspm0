@@ -19,8 +19,10 @@ typedef struct
 {
     VisualGimbalState_t state;
     uint16_t sequence;
-    int16_t  errorX;
+    int16_t  rawErrorX;
+    int16_t  filteredErrorX;
     uint8_t  errorValid;
+    uint8_t  filterSampleCount;
     int8_t   direction;
     uint32_t commandPulses;
     uint32_t frequencyHz;
@@ -30,6 +32,18 @@ typedef struct
     uint32_t invalidFrames;
     uint32_t busySkips;
     uint32_t limitRejects;
+    uint32_t staleFrames;
+    uint32_t startFailures;
+    uint32_t skippedControlFrames;
+    uint32_t directionChanges;
+    uint32_t maxObservationAgeMs;
+    uint32_t processedValidFrames;
+    uint8_t  commandAccepted;
+    uint8_t  locked;
+    uint8_t  lockConfirmCount;
+    uint32_t lockEnterCount;
+    uint8_t  faultLatched;
+    uint8_t  positionValid;
 } VisualGimbalDebug_t;
 
 void VisualGimbal_Init(void);

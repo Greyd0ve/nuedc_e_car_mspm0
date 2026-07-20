@@ -135,8 +135,12 @@
 /* Visual-to-stepper X-axis parameters. */
 #define AIM_X_DEADBAND_PX                       5
 #define AIM_X_SOFT_LIMIT_PULSES                 400
-#define AIM_X_TEST_STEP_FREQ_HZ                 300U
-#define AIM_X_MAX_SINGLE_PULSES                 20U
+#define AIM_X_TEST_STEP_FREQ_HZ                 600U
+#define AIM_X_MAX_SINGLE_PULSES                 8U
+#define AIM_X_DATA_MAX_AGE_MS                   60U
+#define AIM_X_LOCK_ENTER_PX                     5
+#define AIM_X_LOCK_EXIT_PX                      9
+#define AIM_X_LOCK_CONFIRM_FRAMES               4U
 
 /*
  * AIM_X_ERROR_POSITIVE_DIR: 1 = logical positive, -1 = logical negative.
@@ -146,6 +150,11 @@
  *   is wrong; do NOT modify GIMBAL_X_POSITIVE_DIR_LEVEL.
  */
 #define AIM_X_ERROR_POSITIVE_DIR        1
+
+/* Visual gimbal debug output gate. Set to 1U to enable UART1 debug logs. */
+#ifndef ECAR_VISUAL_GIMBAL_DEBUG_ENABLE
+#define ECAR_VISUAL_GIMBAL_DEBUG_ENABLE 0U
+#endif
 
 #if (AIM_X_ERROR_POSITIVE_DIR != 1) && (AIM_X_ERROR_POSITIVE_DIR != -1)
 #error "AIM_X_ERROR_POSITIVE_DIR must be 1 or -1"
@@ -158,6 +167,12 @@
 #endif
 #if (AIM_X_MAX_SINGLE_PULSES == 0U)
 #error "AIM_X_MAX_SINGLE_PULSES must be non-zero"
+#endif
+#if (AIM_X_LOCK_EXIT_PX < AIM_X_LOCK_ENTER_PX)
+#error "AIM_X_LOCK_EXIT_PX must be >= AIM_X_LOCK_ENTER_PX"
+#endif
+#if (AIM_X_LOCK_CONFIRM_FRAMES == 0U)
+#error "AIM_X_LOCK_CONFIRM_FRAMES must be non-zero"
 #endif
 
 /* Stepper motor physical parameters. */
