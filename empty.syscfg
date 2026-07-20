@@ -26,6 +26,7 @@ const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1 = TIMER.addInstance();
 const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1  = UART.addInstance();
+const UART2  = UART.addInstance();
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
@@ -238,6 +239,20 @@ UART1.enableFIFO              = false;
 UART1.enabledInterrupts        = ["RX"];
 UART1.peripheral.txPin.$assign = "PB6";
 UART1.peripheral.rxPin.$assign = "PB7";
+
+/*
+ * K230 vision communication: UART0, 115200 8N1, PA0 TX / PA1 RX.
+ * RX interrupt enabled for receiving binary 22-byte frames.
+ */
+UART2.$name                    = "UART_K230";
+UART2.profile                  = "CONFIG_PROFILE_1";
+UART2.peripheral.$assign       = "UART0";
+UART2.targetBaudRate           = 115200;
+UART2.enableInternalLoopback   = false;
+UART2.enableFIFO              = false;
+UART2.enabledInterrupts        = ["RX"];
+UART2.peripheral.txPin.$assign = "PA0";
+UART2.peripheral.rxPin.$assign = "PA1";
 
 I2C1.$name                     = "I2C_SHARED";
 I2C1.basicEnableController     = true;

@@ -12,6 +12,13 @@ extern volatile uint8_t g_task_10ms_count;
 extern volatile uint8_t g_task_100ms_count;
 extern volatile uint8_t g_task_200ms_count;
 
+static volatile uint32_t s_systemMillis;
+
+uint32_t Timer_GetMillis(void)
+{
+    return s_systemMillis;
+}
+
 /* 饱和计数器只表示“有任务待处理”，避免 ISR 中无限累加。 */
 static void Timer_SaturatingInc(volatile uint8_t *counter)
 {
@@ -50,6 +57,7 @@ void TIMG6_IRQHandler(void)
             Key_Tick();
             BeepLed_Tick1ms();
             ECar_PromptTick1ms();
+            s_systemMillis++;
 
             Timer_SaturatingInc(&g_task_1ms_count);
 

@@ -17,7 +17,10 @@
 #include "cmsis_compiler.h"
 #include <stdint.h>
 
-#if ECAR_GIMBAL_STEP_TEST_MODE
+#if ECAR_AIM_LINK_TEST_MODE
+#include "app_aim_link.h"
+#include "K230Uart.h"
+#elif ECAR_GIMBAL_STEP_TEST_MODE
 #include "GimbalStepper.h"
 #include "app_gimbal_step_test.h"
 #endif
@@ -66,6 +69,57 @@ static void Main_PrintfSingleFieldTest(void)
 }
 #endif
 
+#if ECAR_AIM_LINK_TEST_MODE
+static void Main_PrintAimDebug500ms(void)
+{
+    AimObservation_t obs;
+    AimProtocolStats_t stats;
+    int16_t errX, errY;
+    uint32_t age;
+
+    AimLink_GetProtocolStats(&stats);
+
+    if (AimLink_GetLatestObservation(&obs))
+    {
+        age = AimLink_GetObservationAgeMs();
+
+        Serial_Printf("[aim,ok,%lu,crc,%lu,seq,%u,state,%u,flags,%02X",
+            (unsigned long)stats.validFrames,
+            (unsigned long)stats.crcErrors,
+            (unsigned int)obs.sequence,
+            (unsigned int)obs.trackingState,
+            (unsigned int)obs.validFlags);
+
+        if ((obs.validFlags & AIM_FLAG_RECT_VALID) && (obs.validFlags & AIM_FLAG_LASER_VALID))
+        {
+            errX = (int16_t)obs.rectX - (int16_t)obs.laserX;
+            errY = (int16_t)obs.rectY - (int16_t)obs.laserY;
+            Serial_Printf(",rect,%u,%u,laser,%u,%u,err,%d,%d",
+                (unsigned int)obs.rectX, (unsigned int)obs.rectY,
+                (unsigned int)obs.laserX, (unsigned int)obs.laserY,
+                (int)errX, (int)errY);
+        }
+        else
+        {
+            Serial_Printf(",err,NA");
+        }
+
+        Serial_Printf(",age,%lu,drop,%lu,dup,%lu,old,%lu,ovf,%lu]\r\n",
+            (unsigned long)age,
+            (unsigned long)stats.droppedFrames,
+            (unsigned long)stats.duplicateFrames,
+            (unsigned long)stats.outOfOrderFrames,
+            (unsigned long)K230Uart_GetOverflowCount());
+    }
+    else
+    {
+        Serial_Printf("[aim,no_signal,crc,%lu,ovf,%lu]\r\n",
+            (unsigned long)stats.crcErrors,
+            (unsigned long)K230Uart_GetOverflowCount());
+    }
+}
+#endif
+
 int main(void)
 {
     SYSCFG_DL_init();
@@ -109,7 +163,9 @@ int main(void)
     Motor_StopAll();
     Serial_Init();
 
-#if ECAR_GIMBAL_STEP_TEST_MODE
+#if ECAR_AIM_LINK_TEST_MODE
+    AimLink_Init();
+#elif ECAR_GIMBAL_STEP_TEST_MODE
     GimbalStepTest_Init();
 #else
     Grayscale_Init();
@@ -125,12 +181,12 @@ int main(void)
     OLED_Clear();
 #endif
 
-#if ECAR_IMU_ENABLE && !ECAR_GIMBAL_STEP_TEST_MODE
+#if ECAR_IMU_ENABLE && !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE
     IMU_Init();
 #endif
 
-#if ECAR_GIMBAL_STEP_TEST_MODE
-    /* No additional init in step test mode. */
+#if ECAR_AIM_LINK_TEST_MODE || ECAR_GIMBAL_STEP_TEST_MODE
+    /* No additional init */
 #elif ECAR_BOARD_TEST_MODE
     BoardTest_Init();
 #else
@@ -146,10 +202,14 @@ int main(void)
     {
         uint8_t taskCount;
 
+#if ECAR_AIM_LINK_TEST_MODE
+        AimLink_Process();
+#endif
+
         (void)Main_TakeTaskCounterAll(&g_task_1ms_count);
 
         taskCount = Main_TakeTaskCounterAll(&g_task_5ms_count);
-#if !ECAR_GIMBAL_STEP_TEST_MODE
+#if !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE
         if (taskCount > 0U)
         {
             App_Control_UpdateEncoderSpeed((uint16_t)taskCount * ECAR_ENCODER_SPEED_PERIOD_MS);
@@ -163,8 +223,8 @@ int main(void)
         }
         while (taskCount > 0U)
         {
-#if ECAR_GIMBAL_STEP_TEST_MODE
-            /* No car control in step test mode. */
+#if ECAR_AIM_LINK_TEST_MODE || ECAR_GIMBAL_STEP_TEST_MODE
+            /* No car control */
 #elif ECAR_BOARD_TEST_MODE
             BoardTest_Task10ms();
 #else
@@ -173,20 +233,22 @@ int main(void)
             taskCount--;
         }
 
-#if ECAR_GIMBAL_STEP_TEST_MODE
+#if ECAR_AIM_LINK_TEST_MODE
+        /* Key and serial not used in aim link test mode */
+#elif ECAR_GIMBAL_STEP_TEST_MODE
         GimbalStepTest_KeyProcess();
 #elif !ECAR_BOARD_TEST_MODE
         ECar_KeyProcess();
 #endif
 
-#if !ECAR_GIMBAL_STEP_TEST_MODE
+#if !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE
         ECar_SerialProcess();
 #endif
 
         if (Main_TakeTaskCounterAll(&g_task_100ms_count) > 0U)
         {
-#if ECAR_GIMBAL_STEP_TEST_MODE
-            /* No 100ms task in step test mode. */
+#if ECAR_AIM_LINK_TEST_MODE || ECAR_GIMBAL_STEP_TEST_MODE
+            /* No 100ms task */
 #elif ECAR_BOARD_TEST_MODE
             BoardTest_Task100ms();
 #else
@@ -196,8 +258,10 @@ int main(void)
 
         if (Main_TakeTaskCounterAll(&g_task_200ms_count) > 0U)
         {
-#if ECAR_GIMBAL_STEP_TEST_MODE
-            /* No 200ms task in step test mode. */
+#if ECAR_AIM_LINK_TEST_MODE
+            Main_PrintAimDebug500ms();
+#elif ECAR_GIMBAL_STEP_TEST_MODE
+            /* No 200ms task */
 #elif ECAR_BOARD_TEST_MODE
             BoardTest_Task200ms();
 #elif ECAR_OLED_ENABLE

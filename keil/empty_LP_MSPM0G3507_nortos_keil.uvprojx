@@ -1,7 +1,10 @@
-﻿<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <Project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="project_projx.xsd">
+
   <SchemaVersion>2.1</SchemaVersion>
+
   <Header>### uVision Project, (C) Keil Software</Header>
+
   <Targets>
     <Target>
       <TargetName>empty_LP_MSPM0G3507_nortos_keil</TargetName>
@@ -17,47 +20,28 @@
           <PackURL>https://software-dl.ti.com/msp430/esd/MSPM0-CMSIS/MSPM0G1X0X_G3X0X/latest/exports/</PackURL>
           <Cpu>IRAM(0x20000000,0x00008000) IRAM2(0x20100000,0x00008000) IROM(0x00000000,0x00020000) IROM2(0x00400000,0x00020000) XRAM(0x20200000,0x00008000) XRAM2(0x20300000,0x00008000) CPUTYPE("Cortex-M0+") CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec>
-          </FlashUtilSpec>
-          <StartupFile>
-          </StartupFile>
-          <FlashDriverDll>
-          </FlashDriverDll>
-          <DeviceId>
-          </DeviceId>
-          <RegisterFile>
-          </RegisterFile>
-          <MemoryEnv>
-          </MemoryEnv>
-          <Cmp>
-          </Cmp>
-          <Asm>
-          </Asm>
-          <Linker>
-          </Linker>
-          <OHString>
-          </OHString>
-          <InfinionOptionDll>
-          </InfinionOptionDll>
-          <SLE66CMisc>
-          </SLE66CMisc>
-          <SLE66AMisc>
-          </SLE66AMisc>
-          <SLE66LinkerMisc>
-          </SLE66LinkerMisc>
-          <SFDFile>$$Device:MSPM0G3507$03_SVD\MSPM0G350X.svd</SFDFile>
+          </FlashUtilSpec><StartupFile>
+          </StartupFile><FlashDriverDll>
+          </FlashDriverDll><DeviceId>
+          </DeviceId><RegisterFile>
+          </RegisterFile><MemoryEnv>
+          </MemoryEnv><Cmp>
+          </Cmp><Asm>
+          </Asm><Linker>
+          </Linker><OHString>
+          </OHString><InfinionOptionDll>
+          </InfinionOptionDll><SLE66CMisc>
+          </SLE66CMisc><SLE66AMisc>
+          </SLE66AMisc><SLE66LinkerMisc>
+          </SLE66LinkerMisc><SFDFile>$$Device:MSPM0G3507$03_SVD\MSPM0G350X.svd</SFDFile>
           <bCustSvd>0</bCustSvd>
           <UseEnv>0</UseEnv>
           <BinPath>
-          </BinPath>
-          <IncludePath>
-          </IncludePath>
-          <LibPath>
-          </LibPath>
-          <RegisterFilePath>
-          </RegisterFilePath>
-          <DBRegisterFilePath>
-          </DBRegisterFilePath>
-          <TargetStatus>
+          </BinPath><IncludePath>
+          </IncludePath><LibPath>
+          </LibPath><RegisterFilePath>
+          </RegisterFilePath><DBRegisterFilePath>
+          </DBRegisterFilePath><TargetStatus>
             <Error>0</Error>
             <ExitCodeStop>0</ExitCodeStop>
             <ButtonStop>0</ButtonStop>
@@ -79,10 +63,8 @@
             <RunUserProg1>0</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
             <UserProg1Name>
-            </UserProg1Name>
-            <UserProg2Name>
-            </UserProg2Name>
-            <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
+            </UserProg1Name><UserProg2Name>
+            </UserProg2Name><UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
             <nStopU1X>0</nStopU1X>
             <nStopU2X>0</nStopU2X>
@@ -92,8 +74,7 @@
             <RunUserProg2>0</RunUserProg2>
             <UserProg1Name>cmd.exe /C ""C:\ti\sysconfig_1.21.1\sysconfig_cli.bat" -o "$P.." -s "D:\ti2\mspm0_sdk_2_02_00_05\.metadata\product.json" --compiler keil "$P..\empty.syscfg""</UserProg1Name>
             <UserProg2Name>
-            </UserProg2Name>
-            <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
+            </UserProg2Name><UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
             <nStopB1X>0</nStopB1X>
             <nStopB2X>0</nStopB2X>
@@ -102,18 +83,15 @@
             <RunUserProg1>0</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
             <UserProg1Name>
-            </UserProg1Name>
-            <UserProg2Name>
-            </UserProg2Name>
-            <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
+            </UserProg1Name><UserProg2Name>
+            </UserProg2Name><UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
             <nStopA1X>0</nStopA1X>
             <nStopA2X>0</nStopA2X>
           </AfterMake>
           <SelectedForBatchBuild>0</SelectedForBatchBuild>
           <SVCSIdString>
-          </SVCSIdString>
-        </TargetCommonOption>
+          </SVCSIdString></TargetCommonOption>
         <CommonProperty>
           <UseCPPCompiler>0</UseCPPCompiler>
           <RVCTCodeConst>0</RVCTCodeConst>
@@ -127,10 +105,8 @@
           <PublicsOnly>0</PublicsOnly>
           <StopOnExitCode>3</StopOnExitCode>
           <CustomArgument>
-          </CustomArgument>
-          <IncludeLibraryModules>
-          </IncludeLibraryModules>
-          <ComprImg>1</ComprImg>
+          </CustomArgument><IncludeLibraryModules>
+          </IncludeLibraryModules><ComprImg>1</ComprImg>
         </CommonProperty>
         <DllOption>
           <SimDllName>SARMCM3.DLL</SimDllName>
@@ -161,18 +137,13 @@
             <DriverSelection>0</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
-          <Flash2>
-          </Flash2>
+          <Flash2>BIN\UL2CM3.DLL</Flash2>
           <Flash3>"" ()</Flash3>
           <Flash4>
-          </Flash4>
-          <pFcarmOut>
-          </pFcarmOut>
-          <pFcarmGrp>
-          </pFcarmGrp>
-          <pFcArmRoot>
-          </pFcArmRoot>
-          <FcArmLst>0</FcArmLst>
+          </Flash4><pFcarmOut>
+          </pFcarmOut><pFcarmGrp>
+          </pFcarmGrp><pFcArmRoot>
+          </pFcArmRoot><FcArmLst>0</FcArmLst>
         </Utilities>
         <TargetArmAds>
           <ArmAdsMisc>
@@ -205,8 +176,7 @@
             <GenPPlst>0</GenPPlst>
             <AdsCpuType>"Cortex-M0+"</AdsCpuType>
             <RvctDeviceName>
-            </RvctDeviceName>
-            <mOS>0</mOS>
+            </RvctDeviceName><mOS>0</mOS>
             <uocRom>0</uocRom>
             <uocRam>0</uocRam>
             <hadIROM>1</hadIROM>
@@ -341,8 +311,7 @@
               </OCR_RVCT10>
             </OnChipMemories>
             <RvctStartVector>
-            </RvctStartVector>
-          </ArmAdsMisc>
+            </RvctStartVector></ArmAdsMisc>
           <Cads>
             <interw>1</interw>
             <Optim>3</Optim>
@@ -368,12 +337,9 @@
             <v6WtE>0</v6WtE>
             <v6Rtti>0</v6Rtti>
             <VariousControls>
-              <MiscControls>
-              </MiscControls>
-              <Define>__MSPM0G3507__</Define>
+              <MiscControls></MiscControls>              <Define>__MSPM0G3507__</Define>
               <Undefine>
-              </Undefine>
-              <IncludePath>..,..\App,..\Control,..\Hardware,..\System,..\User,D:\ti2\mspm0_sdk_2_02_00_05\source\third_party\CMSIS\Core\Include,D:\ti2\mspm0_sdk_2_02_00_05\source</IncludePath>
+              </Undefine><IncludePath>..,..\App,..\Control,..\Hardware,..\System,..\User,D:\ti2\mspm0_sdk_2_02_00_05\source\third_party\CMSIS\Core\Include,D:\ti2\mspm0_sdk_2_02_00_05\source</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -388,15 +354,10 @@
             <useXO>0</useXO>
             <ClangAsOpt>1</ClangAsOpt>
             <VariousControls>
-              <MiscControls>
-              </MiscControls>
-              <Define>
-              </Define>
-              <Undefine>
-              </Undefine>
-              <IncludePath>
-              </IncludePath>
-            </VariousControls>
+              <MiscControls></MiscControls>              <Define>
+              </Define><Undefine>
+              </Undefine><IncludePath>
+</IncludePath>            </VariousControls>
           </Aads>
           <LDads>
             <umfTarg>0</umfTarg>
@@ -406,22 +367,15 @@
             <RepFail>1</RepFail>
             <useFile>0</useFile>
             <TextAddressRange>
-            </TextAddressRange>
-            <DataAddressRange>
-            </DataAddressRange>
-            <pXoBase>
-            </pXoBase>
-            <ScatterFile>./mspm0g3507.sct</ScatterFile>
+            </TextAddressRange><DataAddressRange>
+            </DataAddressRange><pXoBase>
+            </pXoBase><ScatterFile>./mspm0g3507.sct</ScatterFile>
             <IncludeLibs>
-            </IncludeLibs>
-            <IncludeLibsPath>
-            </IncludeLibsPath>
-            <Misc>D:\ti2\mspm0_sdk_2_02_00_05\source\ti\driverlib\lib\keil\m0p\mspm0g1x0x_g3x0x\driverlib.a</Misc>
+            </IncludeLibs><IncludeLibsPath>
+            </IncludeLibsPath><Misc>D:\ti2\mspm0_sdk_2_02_00_05\source\ti\driverlib\lib\keil\m0p\mspm0g1x0x_g3x0x\driverlib.a</Misc>
             <LinkerInputFile>
-            </LinkerInputFile>
-            <DisabledWarnings>
-            </DisabledWarnings>
-          </LDads>
+            </LinkerInputFile><DisabledWarnings>
+            </DisabledWarnings></LDads>
         </TargetArmAds>
       </TargetOption>
       <Groups>
@@ -482,6 +436,11 @@
               <FileName>app_aim_link.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\App\app_aim_link.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_aim_protocol.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_aim_protocol.c</FilePath>
             </File>
             <File>
               <FileName>app_board_test.c</FileName>
@@ -563,6 +522,11 @@
               <FileType>1</FileType>
               <FilePath>..\Hardware\GimbalStepper.c</FilePath>
             </File>
+            <File>
+              <FileName>K230Uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\K230Uart.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -578,11 +542,13 @@
       </Groups>
     </Target>
   </Targets>
+
   <RTE>
-    <apis />
-    <components />
-    <files />
+    <apis/>
+    <components/>
+    <files/>
   </RTE>
+
   <LayerInfo>
     <Layers>
       <Layer>
@@ -591,4 +557,5 @@
       </Layer>
     </Layers>
   </LayerInfo>
+
 </Project>

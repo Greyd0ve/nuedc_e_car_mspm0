@@ -107,7 +107,7 @@ flowchart LR
 
 ### 当前开发阶段
 
-**阶段 1：MSPM0 双轴 STEP 开环测试**（当前阶段，代码已编译但**尚未通过实机验证**）
+**阶段 1：MSPM0 双轴 STEP 开环测试**（已完成实机验证）
 
 当前验证内容：
 - MSPM0 能独立驱动两个步进电机；
@@ -200,72 +200,30 @@ K230 GND       ↔  MSPM0 GND
 
 ---
 
-## 视觉观测协议 V0（草案）
+## 视觉观测协议 V0（草案 → 已冻结第一版 22 字节帧）
 
-> **本协议为方案 B 的初版接口草案，K230 和 MSPM0 两端必须共同确认后再冻结。**
+> **本协议为方案 B 的第一版正式帧格式。当前使用网页模拟器 `https://greyd0ve.github.io/bluetooth-tuning-web/` 进行第一阶段联调。**
 
-采用**固定 24 字节二进制帧**：
+采用**固定 22 字节二进制帧**：
 
 | 偏移 | 长度 | 字段 | 类型 | 说明 |
 | --- | --- | --- | --- | --- |
 | 0 | 1 | header0 | uint8 | 固定 0xAA |
 | 1 | 1 | header1 | uint8 | 固定 0x55 |
-| 2 | 1 | version | uint8 | 当前 0x01 |
+| 2 | 1 | version | uint8 | 固定 0x01 |
 | 3 | 1 | msg_type | uint8 | 0x01 表示视觉观测 |
 | 4 | 2 | sequence | uint16 LE | 每帧递增 |
-| 6 | 4 | capture_ms | uint32 LE | 图像采样时间（ms） |
+| 6 | 4 | timestamp_ms | uint32 LE | 图像采样时间（ms） |
 | 10 | 2 | rect_x | uint16 LE | 矩形中心 X |
 | 12 | 2 | rect_y | uint16 LE | 矩形中心 Y |
 | 14 | 2 | laser_x | uint16 LE | 激光点 X |
 | 16 | 2 | laser_y | uint16 LE | 激光点 Y |
 | 18 | 1 | valid_flags | uint8 | 有效状态位 |
-| 19 | 1 | rect_confidence | uint8 | 0~255 |
-| 20 | 1 | laser_confidence | uint8 | 0~255 |
-| 21 | 1 | tracking_state | uint8 | 跟踪状态 |
-| 22 | 2 | crc16 | uint16 LE | 对偏移 0~21 字节计算 |
+| 19 | 1 | tracking_state | uint8 | 跟踪状态 |
+| 20 | 2 | crc16 | uint16 LE | 对偏移 0~19 共 20 字节计算 |
 
-**valid_flags**：
-
-| 位 | 含义 |
-| --- | --- |
-| bit0 | rectangle_valid |
-| bit1 | laser_valid |
-| bit2 | target_locked |
-| bit3 | measurement_fresh |
-| bit4~7 | 保留，发送时置 0 |
-
-**tracking_state**：
-
-| 值 | 含义 |
-| --- | --- |
-| 0 | LOST |
-| 1 | ACQUIRING |
-| 2 | TRACKING |
-| 3 | HOLD |
-| 其他 | 保留 |
-
-**坐标约定**：
-- 统一使用 **640 × 480** 逻辑坐标系；
-- X 范围 0~639，Y 范围 0~479；
-- 左上角为原点，X 向右增大，Y 向下增大；
-- K230 内部即使在 320 × 240 图像上识别，也应在发送前换算到 640 × 480 逻辑坐标。
-
-**无效坐标规则**：
-- 无效坐标发送 **0xFFFF**；
-- **不能用 0 表示无效**；
-- 坐标是否可用必须同时检查 valid_flags；
-- MSPM0 只能使用最新且有效的观测；
-- 不允许排队执行过时的视觉帧。
-
-**CRC**：
-- 建议 CRC-16/CCITT-FALSE；
-- polynomial = 0x1021；
-- init = 0xFFFF；
-- refin = false；
-- refout = false；
-- xorout = 0x0000。
-
-**字节序**：所有多字节整数使用 Little Endian。禁止直接发送 Python 字符串形式的列表作为正式协议。ASCII 调试帧可以保留，但不能和正式二进制协议混在同一串口流中。
+**CRC**：CRC-16/CCITT-FALSE (poly=0x1021, init=0xFFFF, refin/refout=false, xorout=0x0000)。
+标准自测数据 "123456789" → 0x29B1。
 
 ### 时间与频率约定
 

@@ -20,9 +20,6 @@
 #ifndef ECAR_TEST_MOTOR_ENABLE
 #define ECAR_TEST_MOTOR_ENABLE                  0
 #endif
-#ifndef ECAR_TEST_SERVO_ENABLE
-#define ECAR_TEST_SERVO_ENABLE                  0
-#endif
 #ifndef ECAR_TEST_BEEP_ENABLE
 #define ECAR_TEST_BEEP_ENABLE                   0
 #endif
@@ -109,7 +106,19 @@
 
 /* Gimbal stepper test mode. */
 #ifndef ECAR_GIMBAL_STEP_TEST_MODE
-#define ECAR_GIMBAL_STEP_TEST_MODE              1U
+#define ECAR_GIMBAL_STEP_TEST_MODE              0U
+#endif
+
+/* K230 aim link communication test mode. */
+#ifndef ECAR_AIM_LINK_TEST_MODE
+#define ECAR_AIM_LINK_TEST_MODE                 1U
+#endif
+
+#if (ECAR_AIM_LINK_TEST_MODE == 1U) && (ECAR_GIMBAL_STEP_TEST_MODE == 1U)
+#error "Aim link test and gimbal step test cannot run together"
+#endif
+#if (ECAR_AIM_LINK_TEST_MODE == 1U) && (ECAR_BOARD_TEST_MODE == 1U)
+#error "Aim link test and board test cannot run together"
 #endif
 
 /* Stepper motor physical parameters. */

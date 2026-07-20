@@ -395,6 +395,14 @@
 #define SERIAL_UART_IRQN                UART_DEBUG_INST_INT_IRQN
 #define SERIAL_BAUD_RATE                UART_DEBUG_BAUD_RATE
 
+/* K230 vision communication UART */
+#define K230_UART_INST                  UART_K230_INST
+#define K230_UART_IRQN                  UART_K230_INST_INT_IRQN
+#define K230_UART_TX_PORT               GPIO_UART_K230_TX_PORT
+#define K230_UART_TX_PIN                GPIO_UART_K230_TX_PIN
+#define K230_UART_RX_PORT               GPIO_UART_K230_RX_PORT
+#define K230_UART_RX_PIN                GPIO_UART_K230_RX_PIN
+
 /* ---------------- System tick ---------------- */
 #define SYSTEM_TIMER_INST               TIMER_SYS_INST
 #define SYSTEM_TIMER_IRQN               TIMER_SYS_INST_INT_IRQN
