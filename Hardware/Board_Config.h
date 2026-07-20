@@ -340,17 +340,31 @@
 #define KEY_K4_PORT                     KEY4_PORT
 #define KEY_K4_PIN                      KEY4_PIN
 
-/* ---------------- Servo PWM (DEPRECATED, kept for reference) ----------------
- * TIMA0 C0..C3, 50Hz, 20ms period, default output disabled unless test macro
- * enables a center pulse.
- * SERVO1_PWM -> PA21 / TIMA0-C0, SERVO2_PWM -> PA22 / TIMA0-C1,
- * SERVO3_PWM -> PA15 / TIMA0-C2, SERVO4_PWM -> PA17 / TIMA0-C3.
- * Use an independent high-current servo supply and common ground with the
- * MSPM0 board.
- *
- * NOTE: When ECAR_GIMBAL_STEP_TEST_MODE == 1, TIMA0-C0 is repurposed as
- * X STEP and TIMA1-C0 is used for Y STEP.  Servo.c is not called.
- */
+/* ---------------- Servo PWM (DEPRECATED, kept for reference, only for Servo.c backwards compat) ---------------- */
+#define PWM_SERVO_INST                  PWM_GIMBAL_X_INST
+#define PWM_SERVO_INST_IRQHandler       PWM_GIMBAL_X_INST_IRQHandler
+#define PWM_SERVO_INST_INT_IRQN         PWM_GIMBAL_X_INST_INT_IRQN
+#define PWM_SERVO_INST_CLK_FREQ         PWM_GIMBAL_X_INST_CLK_FREQ
+#define GPIO_PWM_SERVO_C0_PORT          GPIO_PWM_GIMBAL_X_C0_PORT
+#define GPIO_PWM_SERVO_C0_PIN           GPIO_PWM_GIMBAL_X_C0_PIN
+#define GPIO_PWM_SERVO_C0_IOMUX         GPIO_PWM_GIMBAL_X_C0_IOMUX
+#define GPIO_PWM_SERVO_C0_IOMUX_FUNC    GPIO_PWM_GIMBAL_X_C0_IOMUX_FUNC
+#define GPIO_PWM_SERVO_C0_IDX           GPIO_PWM_GIMBAL_X_C0_IDX
+#define GPIO_PWM_SERVO_C1_PORT          GPIOA
+#define GPIO_PWM_SERVO_C1_PIN           DL_GPIO_PIN_22
+#define GPIO_PWM_SERVO_C1_IOMUX         IOMUX_PINCM47
+#define GPIO_PWM_SERVO_C1_IOMUX_FUNC    IOMUX_PINCM47_PF_TIMA0_CCP1
+#define GPIO_PWM_SERVO_C1_IDX           DL_TIMER_CC_1_INDEX
+#define GPIO_PWM_SERVO_C2_PORT          GPIOA
+#define GPIO_PWM_SERVO_C2_PIN           DL_GPIO_PIN_15
+#define GPIO_PWM_SERVO_C2_IOMUX         IOMUX_PINCM37
+#define GPIO_PWM_SERVO_C2_IOMUX_FUNC    IOMUX_PINCM37_PF_TIMA0_CCP2
+#define GPIO_PWM_SERVO_C2_IDX           DL_TIMER_CC_2_INDEX
+#define GPIO_PWM_SERVO_C3_PORT          GPIOA
+#define GPIO_PWM_SERVO_C3_PIN           DL_GPIO_PIN_17
+#define GPIO_PWM_SERVO_C3_IOMUX         IOMUX_PINCM39
+#define GPIO_PWM_SERVO_C3_IOMUX_FUNC    IOMUX_PINCM39_PF_TIMA0_CCP3
+#define GPIO_PWM_SERVO_C3_IDX           DL_TIMER_CC_3_INDEX
 #define SERVO_PWM_TIMER_INST            PWM_SERVO_INST
 #define SERVO_PWM_PERIOD_US             20000U
 #define SERVO_MIN_PULSE_US              500U
@@ -365,39 +379,38 @@
 #define SERVO3_PWM                      SERVO3_PWM_CC_INDEX
 #define SERVO4_PWM                      SERVO4_PWM_CC_INDEX
 
-/* ---------------- Gimbal stepper motor pins ----------------
- * X STEP: PA21 / TIMA0-C0,  X DIR: PB15 / GPIO
- * Y STEP: PA15 / TIMA1-C0,  Y DIR: PB16 / GPIO
- * X EN:   PB18 (reserved), Y EN:   PB25 (reserved)
+/* ---------------- Gimbal stepper motor pins (derived from SysConfig) ----------------
+ * X STEP: PA21 / TIMA0-C0, X DIR: PB15 / GPIO, X EN: PB18 (reserved)
+ * Y STEP: PA15 / TIMA1-C0, Y DIR: PB16 / GPIO, Y EN: PB25 (reserved)
  */
-#define GIMBAL_X_STEP_PORT              GPIOA
-#define GIMBAL_X_STEP_PIN               DL_GPIO_PIN_21
-#define GIMBAL_X_STEP_IOMUX             IOMUX_PINCM46
-#define GIMBAL_X_STEP_IOMUX_FUNC        IOMUX_PINCM46_PF_TIMA0_CCP0
-#define GIMBAL_X_STEP_TIMER_INST        TIMA0
-#define GIMBAL_X_STEP_CC_INDEX          DL_TIMER_CC_0_INDEX
+#define GIMBAL_X_STEP_PORT              GPIO_PWM_GIMBAL_X_C0_PORT
+#define GIMBAL_X_STEP_PIN               GPIO_PWM_GIMBAL_X_C0_PIN
+#define GIMBAL_X_STEP_IOMUX             GPIO_PWM_GIMBAL_X_C0_IOMUX
+#define GIMBAL_X_STEP_IOMUX_FUNC        GPIO_PWM_GIMBAL_X_C0_IOMUX_FUNC
+#define GIMBAL_X_STEP_TIMER_INST        PWM_GIMBAL_X_INST
+#define GIMBAL_X_STEP_CC_INDEX          GPIO_PWM_GIMBAL_X_C0_IDX
 
-#define GIMBAL_X_DIR_PORT               GPIOB
-#define GIMBAL_X_DIR_PIN                DL_GPIO_PIN_15
-#define GIMBAL_X_DIR_IOMUX              IOMUX_PINCM41
+#define GIMBAL_X_DIR_PORT               GPIO_GIMBAL_PORT
+#define GIMBAL_X_DIR_PIN                GPIO_GIMBAL_X_DIR_PIN
+#define GIMBAL_X_DIR_IOMUX              GPIO_GIMBAL_X_DIR_IOMUX
 
-#define GIMBAL_Y_STEP_PORT              GPIOA
-#define GIMBAL_Y_STEP_PIN               DL_GPIO_PIN_15
-#define GIMBAL_Y_STEP_IOMUX             IOMUX_PINCM37
-#define GIMBAL_Y_STEP_IOMUX_FUNC        IOMUX_PINCM37_PF_TIMA1_CCP0
-#define GIMBAL_Y_STEP_TIMER_INST        TIMA1
-#define GIMBAL_Y_STEP_CC_INDEX          DL_TIMER_CC_0_INDEX
+#define GIMBAL_Y_STEP_PORT              GPIO_PWM_GIMBAL_Y_C0_PORT
+#define GIMBAL_Y_STEP_PIN               GPIO_PWM_GIMBAL_Y_C0_PIN
+#define GIMBAL_Y_STEP_IOMUX             GPIO_PWM_GIMBAL_Y_C0_IOMUX
+#define GIMBAL_Y_STEP_IOMUX_FUNC        GPIO_PWM_GIMBAL_Y_C0_IOMUX_FUNC
+#define GIMBAL_Y_STEP_TIMER_INST        PWM_GIMBAL_Y_INST
+#define GIMBAL_Y_STEP_CC_INDEX          GPIO_PWM_GIMBAL_Y_C0_IDX
 
-#define GIMBAL_Y_DIR_PORT               GPIOB
-#define GIMBAL_Y_DIR_PIN                DL_GPIO_PIN_16
-#define GIMBAL_Y_DIR_IOMUX              IOMUX_PINCM42
+#define GIMBAL_Y_DIR_PORT               GPIO_GIMBAL_PORT
+#define GIMBAL_Y_DIR_PIN                GPIO_GIMBAL_Y_DIR_PIN
+#define GIMBAL_Y_DIR_IOMUX              GPIO_GIMBAL_Y_DIR_IOMUX
 
-#define GIMBAL_X_EN_PORT                GPIOB
-#define GIMBAL_X_EN_PIN                 DL_GPIO_PIN_18
-#define GIMBAL_Y_EN_PORT                GPIOB
-#define GIMBAL_Y_EN_PIN                 DL_GPIO_PIN_25
+#define GIMBAL_X_EN_PORT                GPIO_GIMBAL_PORT
+#define GIMBAL_X_EN_PIN                 GPIO_GIMBAL_X_EN_PIN
+#define GIMBAL_Y_EN_PORT                GPIO_GIMBAL_PORT
+#define GIMBAL_Y_EN_PIN                 GPIO_GIMBAL_Y_EN_PIN
 
-#define GIMBAL_STEP_TIMER_CLK_FREQ_HZ   1000000U
+#define GIMBAL_STEP_TIMER_CLK_FREQ_HZ   PWM_GIMBAL_X_INST_CLK_FREQ
 #define GIMBAL_STEP_TIMER_PRESCALE      31U
 
 /* ---------------- UARTs ----------------

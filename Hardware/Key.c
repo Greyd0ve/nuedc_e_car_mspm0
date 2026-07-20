@@ -45,6 +45,25 @@ uint8_t Key_GetState(void)
     return 0U;
 }
 
+uint8_t Key_IsPressed(uint8_t keyNum)
+{
+    switch (keyNum)
+    {
+#if !BOARD_OLED_H8_SPI_OWNS_KEY12
+        case 1U:
+            return (DL_GPIO_readPins(KEY_K1_PORT, KEY_K1_PIN) == 0U) ? 1U : 0U;
+        case 2U:
+            return (DL_GPIO_readPins(KEY_K2_PORT, KEY_K2_PIN) == 0U) ? 1U : 0U;
+#endif
+        case 3U:
+            return (DL_GPIO_readPins(KEY_K3_PORT, KEY_K3_PIN) == 0U) ? 1U : 0U;
+        case 4U:
+            return (DL_GPIO_readPins(KEY_K4_PORT, KEY_K4_PIN) == 0U) ? 1U : 0U;
+        default:
+            return 0U;
+    }
+}
+
 void Key_Tick(void)
 {
     static uint8_t count = 0U;

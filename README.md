@@ -544,7 +544,7 @@ E 题正方形赛道循迹逻辑：
 | --- | --- |
 | K1 | X 轴步进电机正方向旋转 45°（400 脉冲 @500 Hz） |
 | K2 | Y 轴步进电机正方向旋转 45°（400 脉冲 @500 Hz） |
-| K3 | 立即停止 X 和 Y 轴 |
+| K3 | **按下立即停止** X 和 Y 轴（不等待释放） |
 | K4 | 空操作 |
 
 测试模式下底盘保持停止，原正方形循迹代码保留但不执行。通过 `ECAR_GIMBAL_STEP_TEST_MODE` 宏可在步进测试和循迹模式之间切换。
@@ -599,7 +599,7 @@ E 题正方形赛道循迹逻辑：
 
 **保留 stub 或最小接口**：
 - OLED：默认使用 H8 排母前 4 针的 4 针 IIC SSD1306 驱动，SCL/SKC=PB9、SDA=PB8，初始化自动尝试地址 0x3C/0x3D。`ECAR_OLED_ENABLE` 默认 0（关闭）
-- MPU6050：使用 GPIO 软件 IIC 驱动（PA28=SDA / PA31=SCL）。`ECAR_IMU_ENABLE` 默认 1（启用），已支持 WHO_AM_I、陀螺仪原始读取、Z 轴零偏校准、yaw 积分
+- MPU6050：使用 GPIO 软件 IIC 驱动（PA28=SDA / PA31=SCL）。`ECAR_IMU_ENABLE` 默认 0（关闭），步进测试模式下强制不初始化
 - TIMA0 四路舵机接口：保留代码但已废弃。`ECAR_GIMBAL_STEP_TEST_MODE=1` 时不调用 `Servo_Init()`
 - UART2/UART3：用途预留，当前未初始化为独立通信驱动
 
@@ -616,8 +616,8 @@ E 题正方形赛道循迹逻辑：
 `empty.syscfg` 已同步当前 IO，但当前工程以 `ti_msp_dl_config.c/.h` 为准。重新打开 SysConfig 或重新生成代码前，请重点复核：
 
 1. TIMG0-C0/C1 是否仍为电机 PWM（PA12/PA13）。
-2. TIMA0-C0 是否为 X STEP PWM（PA21，500 Hz），TIMA0-C1~C3 是否已移除或禁用。
-3. **TIMA1-C0 是否存在独立配置**（Y STEP，PA15，500 Hz）——当前 TIMA1 是在 `GimbalStepper.c` 中手工初始化的，SysConfig **未**管理 TIMA1。
+2. TIMA0 是否配置为 PWM_GIMBAL_X，单通道 CCP0（PA21，500 Hz），四通道属性正确。
+3. TIMA1 是否配置为 PWM_GIMBAL_Y，单通道 CCP0（PA15，500 Hz），SysConfig 已正式管理 TIMA1。
 4. 编码器 PA26/PA27/PA14/PA25 是否和实际接线一致。
 5. UART_DEBUG 是否为 UART1：TX1/PB6、RX1/PB7，波特率 9600，8N1。
 6. 按键 K1=PB22、K2=PA30 是否正确（SysConfig 已生成正确的 KEY1/KEY2 定义）。

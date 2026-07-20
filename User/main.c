@@ -106,16 +106,16 @@ int main(void)
     }
 #else
     Key_Init();
-    Grayscale_Init();
     Motor_Init();
     Motor_StopAll();
-    Encoder_Init();
-    BeepLed_Init();
     Serial_Init();
 
 #if ECAR_GIMBAL_STEP_TEST_MODE
     GimbalStepTest_Init();
 #else
+    Grayscale_Init();
+    Encoder_Init();
+    BeepLed_Init();
     Servo_Init();
     App_Control_Init();
     ECar_Init();
@@ -127,7 +127,7 @@ int main(void)
     OLED_Clear();
 #endif
 
-#if ECAR_IMU_ENABLE
+#if ECAR_IMU_ENABLE && !ECAR_GIMBAL_STEP_TEST_MODE
     IMU_Init();
 #endif
 

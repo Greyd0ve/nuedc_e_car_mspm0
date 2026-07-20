@@ -19,7 +19,9 @@ const I2C    = scripting.addModule("/ti/driverlib/I2C", {}, false);
 const I2C1   = I2C.addInstance();
 const PWM    = scripting.addModule("/ti/driverlib/PWM", {}, false);
 const PWM1   = PWM.addInstance();
+const GPIO6  = GPIO.addInstance();
 const PWM2   = PWM.addInstance();
+const PWM3   = PWM.addInstance();
 const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1 = TIMER.addInstance();
 const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
@@ -179,26 +181,57 @@ PWM1.PWM_CHANNEL_1.$name        = "MOTOR_C1";
 PWM1.PWM_CHANNEL_1.dutyCycle    = 0;
 
 /*
- * Servo PWM: TIMA0-C0..C3, 50Hz.  Physical H7/H15/H8/H14 connector routing
- * must be confirmed on the actual board before enabling ECAR_TEST_SERVO_ENABLE.
+ * Gimbal X STEP: TIMA0-C0, 500Hz PWM on PA21.
+ * TIMA0 is a four-CC timer. Use only CCP0 for X STEP.
  */
-PWM2.$name                      = "PWM_SERVO";
-PWM2.ccIndex                    = [0,1,2,3];
+PWM2.$name                      = "PWM_GIMBAL_X";
+PWM2.ccIndex                    = [0];
 PWM2.clockPrescale              = 32;
-PWM2.timerCount                 = 20000;
+PWM2.timerCount                 = 2000;
 PWM2.peripheral.$assign         = "TIMA0";
 PWM2.peripheral.ccp0Pin.$assign = "PA21";
-PWM2.peripheral.ccp1Pin.$assign = "PA22";
-PWM2.peripheral.ccp2Pin.$assign = "PA15";
-PWM2.peripheral.ccp3Pin.$assign = "PA17";
-PWM2.PWM_CHANNEL_0.$name        = "SERVO_C0";
+PWM2.PWM_CHANNEL_0.$name        = "GIMBAL_X_C0";
 PWM2.PWM_CHANNEL_0.dutyCycle    = 0;
-PWM2.PWM_CHANNEL_1.$name        = "SERVO_C1";
-PWM2.PWM_CHANNEL_1.dutyCycle    = 0;
-PWM2.PWM_CHANNEL_2.$name        = "SERVO_C2";
-PWM2.PWM_CHANNEL_2.dutyCycle    = 0;
-PWM2.PWM_CHANNEL_3.$name        = "SERVO_C3";
-PWM2.PWM_CHANNEL_3.dutyCycle    = 0;
+
+/*
+ * Gimbal Y STEP: TIMA1-C0, 500Hz PWM on PA15.
+ * TIMA1 is a two-CC timer. Use CCP0 for Y STEP.
+ */
+PWM3.$name                      = "PWM_GIMBAL_Y";
+PWM3.ccIndex                    = [0];
+PWM3.clockPrescale              = 32;
+PWM3.timerCount                 = 2000;
+PWM3.peripheral.$assign         = "TIMA1";
+PWM3.peripheral.ccp0Pin.$assign = "PA15";
+PWM3.PWM_CHANNEL_0.$name        = "GIMBAL_Y_C0";
+PWM3.PWM_CHANNEL_0.dutyCycle    = 0;
+
+/*
+ * Gimbal DIR GPIOs: X DIR=PB15, Y DIR=PB16.
+ * X EN=PB18 and Y EN=PB25 reserved, not enabled by default.
+ */
+GPIO6.$name = "GPIO_GIMBAL";
+GPIO6.associatedPins.create(4);
+GPIO6.associatedPins[0].$name        = "X_DIR";
+GPIO6.associatedPins[0].assignedPort = "PORTB";
+GPIO6.associatedPins[0].assignedPin  = "15";
+GPIO6.associatedPins[0].pin.$assign  = "PB15";
+GPIO6.associatedPins[0].initialValue = "CLEARED";
+GPIO6.associatedPins[1].$name        = "Y_DIR";
+GPIO6.associatedPins[1].assignedPort = "PORTB";
+GPIO6.associatedPins[1].assignedPin  = "16";
+GPIO6.associatedPins[1].pin.$assign  = "PB16";
+GPIO6.associatedPins[1].initialValue = "CLEARED";
+GPIO6.associatedPins[2].$name        = "X_EN";
+GPIO6.associatedPins[2].assignedPort = "PORTB";
+GPIO6.associatedPins[2].assignedPin  = "18";
+GPIO6.associatedPins[2].pin.$assign  = "PB18";
+GPIO6.associatedPins[2].initialValue = "CLEARED";
+GPIO6.associatedPins[3].$name        = "Y_EN";
+GPIO6.associatedPins[3].assignedPort = "PORTB";
+GPIO6.associatedPins[3].assignedPin  = "25";
+GPIO6.associatedPins[3].pin.$assign  = "PB25";
+GPIO6.associatedPins[3].initialValue = "CLEARED";
 
 TIMER1.$name              = "TIMER_SYS";
 TIMER1.profile            = "Basic_Periodic";

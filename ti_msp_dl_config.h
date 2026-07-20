@@ -96,35 +96,29 @@ extern "C" {
 #define GPIO_PWM_MOTOR_C1_IOMUX_FUNC                 IOMUX_PINCM35_PF_TIMG0_CCP1
 #define GPIO_PWM_MOTOR_C1_IDX                                DL_TIMER_CC_1_INDEX
 
-/* Defines for PWM_SERVO */
-#define PWM_SERVO_INST                                                     TIMA0
-#define PWM_SERVO_INST_IRQHandler                               TIMA0_IRQHandler
-#define PWM_SERVO_INST_INT_IRQN                                 (TIMA0_INT_IRQn)
-#define PWM_SERVO_INST_CLK_FREQ                                          1000000
+/* Defines for PWM_GIMBAL_X */
+#define PWM_GIMBAL_X_INST                                                  TIMA0
+#define PWM_GIMBAL_X_INST_IRQHandler                            TIMA0_IRQHandler
+#define PWM_GIMBAL_X_INST_INT_IRQN                              (TIMA0_INT_IRQn)
+#define PWM_GIMBAL_X_INST_CLK_FREQ                                       1000000
 /* GPIO defines for channel 0 */
-#define GPIO_PWM_SERVO_C0_PORT                                             GPIOA
-#define GPIO_PWM_SERVO_C0_PIN                                     DL_GPIO_PIN_21
-#define GPIO_PWM_SERVO_C0_IOMUX                                  (IOMUX_PINCM46)
-#define GPIO_PWM_SERVO_C0_IOMUX_FUNC                 IOMUX_PINCM46_PF_TIMA0_CCP0
-#define GPIO_PWM_SERVO_C0_IDX                                DL_TIMER_CC_0_INDEX
-/* GPIO defines for channel 1 */
-#define GPIO_PWM_SERVO_C1_PORT                                             GPIOA
-#define GPIO_PWM_SERVO_C1_PIN                                     DL_GPIO_PIN_22
-#define GPIO_PWM_SERVO_C1_IOMUX                                  (IOMUX_PINCM47)
-#define GPIO_PWM_SERVO_C1_IOMUX_FUNC                 IOMUX_PINCM47_PF_TIMA0_CCP1
-#define GPIO_PWM_SERVO_C1_IDX                                DL_TIMER_CC_1_INDEX
-/* GPIO defines for channel 2 */
-#define GPIO_PWM_SERVO_C2_PORT                                             GPIOA
-#define GPIO_PWM_SERVO_C2_PIN                                     DL_GPIO_PIN_15
-#define GPIO_PWM_SERVO_C2_IOMUX                                  (IOMUX_PINCM37)
-#define GPIO_PWM_SERVO_C2_IOMUX_FUNC                 IOMUX_PINCM37_PF_TIMA0_CCP2
-#define GPIO_PWM_SERVO_C2_IDX                                DL_TIMER_CC_2_INDEX
-/* GPIO defines for channel 3 */
-#define GPIO_PWM_SERVO_C3_PORT                                             GPIOA
-#define GPIO_PWM_SERVO_C3_PIN                                     DL_GPIO_PIN_17
-#define GPIO_PWM_SERVO_C3_IOMUX                                  (IOMUX_PINCM39)
-#define GPIO_PWM_SERVO_C3_IOMUX_FUNC                 IOMUX_PINCM39_PF_TIMA0_CCP3
-#define GPIO_PWM_SERVO_C3_IDX                                DL_TIMER_CC_3_INDEX
+#define GPIO_PWM_GIMBAL_X_C0_PORT                                          GPIOA
+#define GPIO_PWM_GIMBAL_X_C0_PIN                                  DL_GPIO_PIN_21
+#define GPIO_PWM_GIMBAL_X_C0_IOMUX                               (IOMUX_PINCM46)
+#define GPIO_PWM_GIMBAL_X_C0_IOMUX_FUNC              IOMUX_PINCM46_PF_TIMA0_CCP0
+#define GPIO_PWM_GIMBAL_X_C0_IDX                             DL_TIMER_CC_0_INDEX
+
+/* Defines for PWM_GIMBAL_Y */
+#define PWM_GIMBAL_Y_INST                                                  TIMA1
+#define PWM_GIMBAL_Y_INST_IRQHandler                            TIMA1_IRQHandler
+#define PWM_GIMBAL_Y_INST_INT_IRQN                              (TIMA1_INT_IRQn)
+#define PWM_GIMBAL_Y_INST_CLK_FREQ                                       1000000
+/* GPIO defines for channel 0 */
+#define GPIO_PWM_GIMBAL_Y_C0_PORT                                          GPIOA
+#define GPIO_PWM_GIMBAL_Y_C0_PIN                                  DL_GPIO_PIN_15
+#define GPIO_PWM_GIMBAL_Y_C0_IOMUX                               (IOMUX_PINCM37)
+#define GPIO_PWM_GIMBAL_Y_C0_IOMUX_FUNC              IOMUX_PINCM37_PF_TIMA1_CCP0
+#define GPIO_PWM_GIMBAL_Y_C0_IDX                             DL_TIMER_CC_0_INDEX
 
 
 
@@ -248,6 +242,21 @@ extern "C" {
 #define GPIO_BOARD_IO_BEEP_PORT                                          (GPIOA)
 #define GPIO_BOARD_IO_BEEP_PIN                                   (DL_GPIO_PIN_7)
 #define GPIO_BOARD_IO_BEEP_IOMUX                                 (IOMUX_PINCM14)
+/* Port definition for Pin Group GPIO_GIMBAL */
+#define GPIO_GIMBAL_PORT                                                 (GPIOB)
+
+/* Defines for X_DIR: GPIOB.15 with pinCMx 32 on package pin 3 */
+#define GPIO_GIMBAL_X_DIR_PIN                                   (DL_GPIO_PIN_15)
+#define GPIO_GIMBAL_X_DIR_IOMUX                                  (IOMUX_PINCM32)
+/* Defines for Y_DIR: GPIOB.16 with pinCMx 33 on package pin 4 */
+#define GPIO_GIMBAL_Y_DIR_PIN                                   (DL_GPIO_PIN_16)
+#define GPIO_GIMBAL_Y_DIR_IOMUX                                  (IOMUX_PINCM33)
+/* Defines for X_EN: GPIOB.18 with pinCMx 44 on package pin 15 */
+#define GPIO_GIMBAL_X_EN_PIN                                    (DL_GPIO_PIN_18)
+#define GPIO_GIMBAL_X_EN_IOMUX                                   (IOMUX_PINCM44)
+/* Defines for Y_EN: GPIOB.25 with pinCMx 56 on package pin 27 */
+#define GPIO_GIMBAL_Y_EN_PIN                                    (DL_GPIO_PIN_25)
+#define GPIO_GIMBAL_Y_EN_IOMUX                                   (IOMUX_PINCM56)
 
 /* clang-format on */
 
@@ -256,7 +265,8 @@ void SYSCFG_DL_initPower(void);
 void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_MOTOR_init(void);
-void SYSCFG_DL_PWM_SERVO_init(void);
+void SYSCFG_DL_PWM_GIMBAL_X_init(void);
+void SYSCFG_DL_PWM_GIMBAL_Y_init(void);
 void SYSCFG_DL_TIMER_SYS_init(void);
 void SYSCFG_DL_I2C_SHARED_init(void);
 void SYSCFG_DL_UART_DEBUG_init(void);

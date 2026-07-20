@@ -30,10 +30,10 @@
 #define ECAR_TEST_OLED_ENABLE                   0
 #endif
 #ifndef ECAR_IMU_ENABLE
-#define ECAR_IMU_ENABLE                         1
+#define ECAR_IMU_ENABLE                         0U
 #endif
 #ifndef ECAR_TEST_IMU_ENABLE
-#define ECAR_TEST_IMU_ENABLE                    0
+#define ECAR_TEST_IMU_ENABLE                    0U
 #endif
 
 /* Master OLED switch. Set to 1 only when the display is physically connected.
@@ -124,7 +124,7 @@
 
 #define GIMBAL_TEST_STEP_FREQ_HZ                500U
 
-/* Direction level configurable per axis. */
+/* Direction level configurable per axis. Valid: 0U or 1U. */
 #define GIMBAL_X_POSITIVE_DIR_LEVEL             1U
 #define GIMBAL_Y_POSITIVE_DIR_LEVEL             1U
 
@@ -132,12 +132,26 @@
 #ifndef GIMBAL_USE_ENABLE_GPIO
 #define GIMBAL_USE_ENABLE_GPIO                  0U
 #endif
-#if GIMBAL_USE_ENABLE_GPIO
-#define GIMBAL_X_EN_PORT                        GPIOB
-#define GIMBAL_X_EN_PIN                         DL_GPIO_PIN_18
-#define GIMBAL_Y_EN_PORT                        GPIOB
-#define GIMBAL_Y_EN_PIN                         DL_GPIO_PIN_25
 #define GIMBAL_EN_ACTIVE_LEVEL                  1U
+
+/* Compile-time checks. */
+#if (GIMBAL_MICROSTEP == 0U)
+#error GIMBAL_MICROSTEP must be non-zero
+#endif
+#if (GIMBAL_PULSES_PER_REV % 360U) != 0U
+/* NOTE: 3200 % 360 = 320, not exact per-degree mapping. */
+#endif
+#if GIMBAL_TEST_PULSES != 400U
+#error GIMBAL_TEST_PULSES must be 400
+#endif
+#if (GIMBAL_X_POSITIVE_DIR_LEVEL != 0U) && (GIMBAL_X_POSITIVE_DIR_LEVEL != 1U)
+#error GIMBAL_X_POSITIVE_DIR_LEVEL must be 0 or 1
+#endif
+#if (GIMBAL_Y_POSITIVE_DIR_LEVEL != 0U) && (GIMBAL_Y_POSITIVE_DIR_LEVEL != 1U)
+#error GIMBAL_Y_POSITIVE_DIR_LEVEL must be 0 or 1
+#endif
+#if (GIMBAL_EN_ACTIVE_LEVEL != 0U) && (GIMBAL_EN_ACTIVE_LEVEL != 1U)
+#error GIMBAL_EN_ACTIVE_LEVEL must be 0 or 1
 #endif
 
 #endif
