@@ -200,56 +200,293 @@ K230 GND       ↔  MSPM0 GND
 
 ---
 
-## 视觉观测协议 V0（草案 → 已冻结第一版 22 字节帧）
+## K230 → MSPM0G3507 视觉通信协议 V1
 
-> **本协议为方案 B 的第一版正式帧格式。当前使用网页模拟器 `https://greyd0ve.github.io/bluetooth-tuning-web/` 进行第一阶段联调。**
+> **本协议为方案 B 的第一版正式帧格式，已通过实机 10Hz 连续通信验证。**
+> 当前使用网页模拟器 `https://greyd0ve.github.io/bluetooth-tuning-web/` 进行联调。
 
-采用**固定 22 字节二进制帧**：
+### 通信方向
+
+```
+K230 / PC 视觉模拟器  →  MSPM0G3507  [单向]
+```
+
+K230 负责：识别矩形、计算矩形中心、识别激光点、判断坐标有效性、设置 valid_flags / tracking_state、维护 sequence、填写 timestamp_ms、计算 CRC、按固定周期发送。
+
+MSPM0G3507 负责：接收 UART0 二进制数据、搜索帧头、校验版本/消息类型/CRC/坐标/flags/state、检查 sequence、计算 error_x / error_y（后续根据误差控制云台）。
+
+**K230 不发送**：步进电机方向、STEP 频率、脉冲数量、PID 输出、云台角度命令。
+
+**当前不包含**：ACK、NACK、状态回包、参数设置、双向控制命令、可变长度数据帧。
+
+### UART 配置
+
+| 项目 | 配置 |
+|------|------|
+| MCU 外设 | UART0 |
+| 波特率 | 115200 |
+| 数据位 | 8 |
+| 停止位 | 1 |
+| 校验位 | None |
+| 流控 | None |
+| 电平 | 3.3V TTL |
+| 数据格式 | 原始二进制 |
+| 多字节整数 | Little Endian |
+
+**引脚**：
+
+| 信号 | K230 | MSPM0G3507 |
+|------|------|------------|
+| K230 TX | UART3 TX / GPIO32 | PA1 / UART0_RX |
+| K230 RX | UART3 RX / GPIO33 | PA0 / UART0_TX |
+| GND | GND | GND |
+
+当前为单向发送，实际跑通只需 `K230 TX → MSPM0 PA1` + `GND ↔ GND`。PA0 / K230 RX 预留，MSPM0 不返回 ACK。
+
+> UART1（PB6/PB7, 9600 8N1）用于 ASCII 调试日志，不得与 UART0 二进制视觉数据混用。
+
+### 固定 22 字节帧
 
 | 偏移 | 长度 | 字段 | 类型 | 说明 |
-| --- | --- | --- | --- | --- |
+|---:|---:|---|---|---|
 | 0 | 1 | header0 | uint8 | 固定 0xAA |
 | 1 | 1 | header1 | uint8 | 固定 0x55 |
 | 2 | 1 | version | uint8 | 固定 0x01 |
-| 3 | 1 | msg_type | uint8 | 0x01 表示视觉观测 |
-| 4 | 2 | sequence | uint16 LE | 每帧递增 |
-| 6 | 4 | timestamp_ms | uint32 LE | 图像采样时间（ms） |
+| 3 | 1 | msg_type | uint8 | 固定 0x01（视觉观测） |
+| 4 | 2 | sequence | uint16 LE | 帧序号 |
+| 6 | 4 | timestamp_ms | uint32 LE | K230 启动后毫秒数 |
 | 10 | 2 | rect_x | uint16 LE | 矩形中心 X |
 | 12 | 2 | rect_y | uint16 LE | 矩形中心 Y |
 | 14 | 2 | laser_x | uint16 LE | 激光点 X |
 | 16 | 2 | laser_y | uint16 LE | 激光点 Y |
-| 18 | 1 | valid_flags | uint8 | 有效状态位 |
-| 19 | 1 | tracking_state | uint8 | 跟踪状态 |
-| 20 | 2 | crc16 | uint16 LE | 对偏移 0~19 共 20 字节计算 |
+| 18 | 1 | valid_flags | uint8 | 坐标及状态有效位 |
+| 19 | 1 | tracking_state | uint8 | 视觉跟踪状态 |
+| 20 | 2 | crc16 | uint16 LE | CRC-16/CCITT-FALSE |
 
-**CRC**：CRC-16/CCITT-FALSE (poly=0x1021, init=0xFFFF, refin/refout=false, xorout=0x0000)。
-标准自测数据 "123456789" → 0x29B1。
+总长度固定 **22 字节**。不包含长度字段、结束符、换行符、ASCII 或 JSON。
 
-### 时间与频率约定
+### 小端示例
 
-以下为**设计目标**，非当前已实现状态：
+| 字段 | 值 | 发送字节 |
+|------|------|----------|
+| sequence | 0x1234 | `34 12` |
+| rect_x = 320 | 0x0140 | `40 01` |
+| timestamp_ms | 0x12345678 | `78 56 34 12` |
 
-**K230 目标**：
-- 摄像头请求帧率可以高于实际输出率；
-- 正式视觉观测初期目标为稳定 50~60 Hz；
-- 允许实际范围约 30~90 Hz；
-- 每完成一次有效视觉处理就发送一帧；
-- 不需要为了兼容旧控制器而固定在 50 Hz；
-- 发送帧必须携带 sequence 和 capture_ms。
+### 坐标系
 
-**MSPM0 目标**：
-- UART 接收中断只负责接收字节；
-- 协议解析在前台完成；
-- 只保存最新一帧有效观测；
-- 云台控制任务目标周期 1 ms；
-- 新视觉帧到达时更新外环；
-- 两帧之间由轨迹规划继续运行；
-- 视觉数据超时后必须减速停止。
+- 图像分辨率：**640 × 480**
+- 原点：左上角 (0,0)，X 向右增大，Y 向下增大
+- X 合法范围：0～639，Y 合法范围：0～479
+- 无效坐标：**0xFFFF**（65535）。禁止用 0 表示无效，禁止发送 ≥640 或 ≥480 的有效坐标
 
-**初版建议超时**（后续通过实测调整）：
-- 小于 100 ms：正常使用；
-- 100~300 ms：降级或保持；
-- 超过 300 ms：云台目标速度归零。
+### valid_flags
+
+| 位 | 宏 | 值 | 含义 |
+|---:|---|---:|---|
+| bit0 | RECT_VALID | 0x01 | 矩形坐标有效 |
+| bit1 | LASER_VALID | 0x02 | 激光坐标有效 |
+| bit2 | TARGET_LOCKED | 0x04 | 目标已锁定 |
+| bit3 | MEASUREMENT_FRESH | 0x08 | 当前为新鲜测量 |
+| bit4～7 | — | — | 必须为 0 |
+
+**常用组合**：
+
+| flags | 含义 |
+|------:|------|
+| 0x00 | 所有坐标无效 |
+| 0x01 | 仅矩形有效 |
+| 0x0F | 坐标有效、目标锁定、数据新鲜 |
+
+**一致性规则**：
+
+- RECT_VALID=1 → rect_x/rect_y 必须 0～639 / 0～479
+- RECT_VALID=0 → rect_x/rect_y 必须为 65535
+- LASER_VALID=1 → laser_x/laser_y 必须 0～639 / 0～479
+- LASER_VALID=0 → laser_x/laser_y 必须为 65535
+
+### tracking_state
+
+| 值 | 名称 | 含义 |
+|---:|---|---|
+| 0 | LOST | 未发现有效目标 |
+| 1 | ACQUIRING | 正在搜索/确认目标 |
+| 2 | TRACKING | 连续跟踪中 |
+| 3 | HOLD | 保持当前锁定 |
+| 4 | FAULT | 视觉模块故障 |
+
+**推荐状态帧**：
+
+| 状态 | flags | rect | laser |
+|------|------|------|-------|
+| LOST | 0x00 | 65535,65535 | 65535,65535 |
+| ACQUIRING | 0x01 | 实际矩形 | 65535,65535 |
+| TRACKING | 0x0F | 实际矩形 | 实际激光 |
+| FAULT | 0x00 | 65535,65535 | 65535,65535 |
+
+### CRC
+
+| 参数 | 值 |
+|------|------|
+| 算法 | CRC-16/CCITT-FALSE |
+| Poly | 0x1021 |
+| Init | 0xFFFF |
+| RefIn | false |
+| RefOut | false |
+| XorOut | 0x0000 |
+
+标准自检：`"123456789"` → **0x29B1**
+
+CRC 覆盖 `frame[0]`～`frame[19]`（前 20 字节）。结果按小端写入 `frame[20]` 和 `frame[21]`。
+
+### sequence
+
+`uint16`，每发送一帧递增：`sequence = (sequence + 1) & 0xFFFF`
+
+自然回绕：65534 → 65535 → 0 → 1。MSPM0 使用 sequence 检查重复帧、丢帧和乱序帧。超过约 1000ms 无合法帧后，MSPM0 允许下一合法帧重建基线。**K230 重启后建议等待 ≥1 秒再恢复发送**，避免清零的 sequence 被误判为旧帧。
+
+### timestamp_ms
+
+填写 K230 启动以来毫秒数（`uint32`，允许自然回绕）。MSPM0 保存该值但**不使用 K230 时间戳判断链路超时**——链路新鲜度使用 MSPM0 本地接收时间判断。
+
+### 发送周期
+
+当前推荐 **10Hz**（每 100ms 一帧）。即使坐标未变化也应继续发送（sequence 递增、timestamp 更新），否则 MSPM0 无法判断链路是否在线。后续可测试 20Hz、50Hz。
+
+### 数据发送要求
+
+**必须发送原始二进制**：`uart.write(frame)` → `b"\xAA\x55\x01\x01..."`
+
+**禁止**在同一 UART 中混入 `print`、调试文本、中文、JSON、换行符、ASCII 日志或十六进制字符串。K230 调试输出必须使用其他通道。
+
+### CENTERED 测试帧
+
+| 字段 | 值 |
+|------|------|
+| sequence | 0 |
+| timestamp_ms | 0 |
+| rect_x, rect_y | 320, 240 |
+| laser_x, laser_y | 320, 240 |
+| valid_flags | 0x0F |
+| tracking_state | 2 (TRACKING) |
+
+前 20 字节：`AA 55 01 01 00 00 00 00 00 00 40 01 F0 00 40 01 F0 00 0F 02`
+
+CRC：**0xA004**
+
+完整 22 字节：`AA 55 01 01 00 00 00 00 00 00 40 01 F0 00 40 01 F0 00 0F 02 04 A0`
+
+MSPM0 预期解析：sequence=0, rect=(320,240), laser=(320,240), error=(0,0), flags=0x0F, state=2
+
+### 协议验收表
+
+| 测试 | 预期 |
+|------|------|
+| LOST | state=0, flags=0x00, 坐标全部 65535, err=NA |
+| ACQUIRING | 仅矩形有效, laser=65535,65535, err=NA |
+| CENTERED | rect=320,240, laser=320,240, err=(0,0) |
+| 偏差 | rect=400,200, laser=320,240 → err=(80,-40) |
+| 10Hz×30s | ok≈300, candidate≈300, crc=0, field=0, drop=0, dup=0, old=0, guard=0, ovf=0 |
+
+### 实机测试记录（当前环境）
+
+当前 10Hz 连续通信测试中：
+
+- selftest = PASS
+- ok 与 candidate 一致
+- crcErrors = 0, fieldErrors = 0
+- droppedFrames = 0, duplicateFrames = 0, outOfOrderFrames = 0
+- parserGuardResets = 0
+- UART overflow = 0
+
+> 以上为当前实验环境测试结果，不代表所有硬件环境绝对无错误。
+
+### K230 Python 参考代码
+
+```python
+import struct
+import time
+
+HEADER0 = 0xAA
+HEADER1 = 0x55
+PROTOCOL_VERSION = 0x01
+MSG_VISION_OBSERVATION = 0x01
+
+COORD_INVALID = 0xFFFF
+
+FLAG_RECT_VALID        = 1 << 0
+FLAG_LASER_VALID       = 1 << 1
+FLAG_TARGET_LOCKED     = 1 << 2
+FLAG_MEASUREMENT_FRESH = 1 << 3
+
+STATE_LOST      = 0
+STATE_ACQUIRING = 1
+STATE_TRACKING  = 2
+STATE_HOLD      = 3
+STATE_FAULT     = 4
+
+
+def crc16_ccitt_false(data):
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            if crc & 0x8000:
+                crc = ((crc << 1) ^ 0x1021) & 0xFFFF
+            else:
+                crc = (crc << 1) & 0xFFFF
+    return crc
+
+
+def build_vision_frame(
+    sequence, timestamp_ms,
+    rect_x, rect_y, laser_x, laser_y,
+    valid_flags, tracking_state,
+):
+    body = struct.pack(
+        "<BBBBHIHHHHBB",
+        HEADER0, HEADER1,
+        PROTOCOL_VERSION, MSG_VISION_OBSERVATION,
+        sequence & 0xFFFF,
+        timestamp_ms & 0xFFFFFFFF,
+        rect_x & 0xFFFF, rect_y & 0xFFFF,
+        laser_x & 0xFFFF, laser_y & 0xFFFF,
+        valid_flags & 0xFF,
+        tracking_state & 0xFF,
+    )
+    crc = crc16_ccitt_false(body)
+    return body + struct.pack("<H", crc)
+
+
+# 10Hz TRACKING 示例
+sequence = 0
+flags = (FLAG_RECT_VALID | FLAG_LASER_VALID |
+         FLAG_TARGET_LOCKED | FLAG_MEASUREMENT_FRESH)
+
+while True:
+    frame = build_vision_frame(
+        sequence=sequence,
+        timestamp_ms=time.ticks_ms(),
+        rect_x=320, rect_y=240,
+        laser_x=320, laser_y=240,
+        valid_flags=flags,
+        tracking_state=STATE_TRACKING,
+    )
+    uart.write(frame)
+    sequence = (sequence + 1) & 0xFFFF
+    time.sleep_ms(100)
+```
+
+> K230 的 `time` API 以实际运行环境为准。
+
+### 协议相关代码位置
+
+| 文件 | 职责 |
+|------|------|
+| `App/app_aim_protocol.h/c` | 帧格式、CRC、字段校验、sequence、解析状态机 |
+| `App/app_aim_link.h/c` | 协议层接口、链路健康状态 |
+| `Hardware/K230Uart.h/c` | UART0 接收中断、512B 环形缓冲区 |
+| `User/main.c` | 通信测试模式、UART1 调试输出 |
 
 ---
 
