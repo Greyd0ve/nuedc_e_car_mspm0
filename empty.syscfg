@@ -146,8 +146,8 @@ GPIO4.associatedPins[1].direction        = "INPUT";
 GPIO4.associatedPins[1].internalResistor = "PULL_UP";
 GPIO4.associatedPins[2].$name            = "KEY3";
 GPIO4.associatedPins[2].assignedPort     = "PORTB";
-GPIO4.associatedPins[2].assignedPin      = "27";
-GPIO4.associatedPins[2].pin.$assign      = "PB27";
+GPIO4.associatedPins[2].assignedPin      = "0";
+GPIO4.associatedPins[2].pin.$assign      = "PB0";
 GPIO4.associatedPins[2].direction        = "INPUT";
 GPIO4.associatedPins[2].internalResistor = "PULL_UP";
 GPIO4.associatedPins[3].$name            = "KEY4";
@@ -208,10 +208,11 @@ PWM3.PWM_CHANNEL_0.dutyCycle    = 0;
 
 /*
  * Gimbal DIR GPIOs: X DIR=PB15, Y DIR=PB16.
- * X EN=PB18 and Y EN=PB25 reserved, not enabled by default.
+ * X EN=PB18 and Y EN=PB25 are left unconfigured (input Hi-Z)
+ * until GIMBAL_USE_ENABLE_GPIO is enabled and wiring is confirmed.
  */
 GPIO6.$name = "GPIO_GIMBAL";
-GPIO6.associatedPins.create(4);
+GPIO6.associatedPins.create(2);
 GPIO6.associatedPins[0].$name        = "X_DIR";
 GPIO6.associatedPins[0].assignedPort = "PORTB";
 GPIO6.associatedPins[0].assignedPin  = "15";
@@ -222,16 +223,6 @@ GPIO6.associatedPins[1].assignedPort = "PORTB";
 GPIO6.associatedPins[1].assignedPin  = "16";
 GPIO6.associatedPins[1].pin.$assign  = "PB16";
 GPIO6.associatedPins[1].initialValue = "CLEARED";
-GPIO6.associatedPins[2].$name        = "X_EN";
-GPIO6.associatedPins[2].assignedPort = "PORTB";
-GPIO6.associatedPins[2].assignedPin  = "18";
-GPIO6.associatedPins[2].pin.$assign  = "PB18";
-GPIO6.associatedPins[2].initialValue = "CLEARED";
-GPIO6.associatedPins[3].$name        = "Y_EN";
-GPIO6.associatedPins[3].assignedPort = "PORTB";
-GPIO6.associatedPins[3].assignedPin  = "25";
-GPIO6.associatedPins[3].pin.$assign  = "PB25";
-GPIO6.associatedPins[3].initialValue = "CLEARED";
 
 TIMER1.$name              = "TIMER_SYS";
 TIMER1.profile            = "Basic_Periodic";

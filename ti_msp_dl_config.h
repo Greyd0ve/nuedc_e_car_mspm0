@@ -226,10 +226,10 @@ extern "C" {
 #define GPIO_KEYS_KEY2_PORT                                              (GPIOA)
 #define GPIO_KEYS_KEY2_PIN                                      (DL_GPIO_PIN_30)
 #define GPIO_KEYS_KEY2_IOMUX                                      (IOMUX_PINCM5)
-/* Defines for KEY3: GPIOB.27 with pinCMx 58 on package pin 29 */
+/* Defines for KEY3: GPIOB.0 with pinCMx 12 on package pin 47 */
 #define GPIO_KEYS_KEY3_PORT                                              (GPIOB)
-#define GPIO_KEYS_KEY3_PIN                                      (DL_GPIO_PIN_27)
-#define GPIO_KEYS_KEY3_IOMUX                                     (IOMUX_PINCM58)
+#define GPIO_KEYS_KEY3_PIN                                       (DL_GPIO_PIN_0)
+#define GPIO_KEYS_KEY3_IOMUX                                     (IOMUX_PINCM12)
 /* Defines for KEY4: GPIOB.26 with pinCMx 57 on package pin 28 */
 #define GPIO_KEYS_KEY4_PORT                                              (GPIOB)
 #define GPIO_KEYS_KEY4_PIN                                      (DL_GPIO_PIN_26)
@@ -251,12 +251,6 @@ extern "C" {
 /* Defines for Y_DIR: GPIOB.16 with pinCMx 33 on package pin 4 */
 #define GPIO_GIMBAL_Y_DIR_PIN                                   (DL_GPIO_PIN_16)
 #define GPIO_GIMBAL_Y_DIR_IOMUX                                  (IOMUX_PINCM33)
-/* Defines for X_EN: GPIOB.18 with pinCMx 44 on package pin 15 */
-#define GPIO_GIMBAL_X_EN_PIN                                    (DL_GPIO_PIN_18)
-#define GPIO_GIMBAL_X_EN_IOMUX                                   (IOMUX_PINCM44)
-/* Defines for Y_EN: GPIOB.25 with pinCMx 56 on package pin 27 */
-#define GPIO_GIMBAL_Y_EN_PIN                                    (DL_GPIO_PIN_25)
-#define GPIO_GIMBAL_Y_EN_IOMUX                                   (IOMUX_PINCM56)
 
 /* clang-format on */
 

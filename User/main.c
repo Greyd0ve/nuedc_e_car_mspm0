@@ -13,7 +13,6 @@
 #include "Motor.h"
 #include "OLED.h"
 #include "Serial.h"
-#include "Servo.h"
 #include "Timer.h"
 #include "cmsis_compiler.h"
 #include <stdint.h>
@@ -116,7 +115,6 @@ int main(void)
     Grayscale_Init();
     Encoder_Init();
     BeepLed_Init();
-    Servo_Init();
     App_Control_Init();
     ECar_Init();
     ECar_Serial_Init();

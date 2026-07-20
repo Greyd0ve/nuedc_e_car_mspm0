@@ -124,6 +124,9 @@
 
 #define GIMBAL_TEST_STEP_FREQ_HZ                500U
 
+#define GIMBAL_STEP_FREQ_MIN_HZ                 100U
+#define GIMBAL_STEP_FREQ_MAX_HZ                 5000U
+
 /* Direction level configurable per axis. Valid: 0U or 1U. */
 #define GIMBAL_X_POSITIVE_DIR_LEVEL             1U
 #define GIMBAL_Y_POSITIVE_DIR_LEVEL             1U

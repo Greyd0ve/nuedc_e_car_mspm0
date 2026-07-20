@@ -5,16 +5,19 @@
 #include "cmsis_compiler.h"
 
 /*
- * Edge-aligned PWM, DL_TIMER_CC_OCTL_INIT_VAL_LOW:
- *   Zero event  → counter reload, output goes HIGH  → physical STEP rising edge
- *   Compare CC0 → output goes LOW                   → physical STEP falling edge
+ * DL_TIMER_PWM_MODE_EDGE_ALIGN = GPTIMER_CTRCTL_CM_DOWN (down-counting).
  *
- * Pulse counting:
- *   Each zero event = 1 rising edge emitted.
- *   When emitted reaches target, disable zero interrupt and arm CC0 interrupt.
- *   CC0 interrupt fires → falling edge of last pulse complete → finalize stop.
+ * With DL_TIMER_CC_OCTL_INIT_VAL_LOW in down-count edge-aligned PWM:
+ *   Counter loads from (period-1), counts down to 0.
+ *   ZERO event  → counter reloads to (period-1), output goes HIGH → STEP rising edge.
+ *   CC0_DN event → counter reaches compare value, output goes LOW → STEP falling edge.
  *
- * Result: exactly target rising edges with full high-width on last pulse.
+ * Two-stage finite pulse stop:
+ *   Stage 1 (ZERO interrupt): emitted reaches target → disable ZERO, arm CC0_DN.
+ *   Stage 2 (CC0_DN interrupt): last pulse falling edge complete → stop timer,
+ *       force STEP low, set done, clear busy.
+ *
+ * Result: exactly target complete STEP pulses; no truncation, no extra 401st pulse.
  */
 #define GIMBAL_PERIOD_COUNTS(_freq) \
     ((uint32_t)(GIMBAL_STEP_TIMER_CLK_FREQ_HZ / (_freq)))
@@ -30,9 +33,9 @@ typedef struct
     uint8_t           positiveDirLevel;
     uint8_t           dirOutputLevel;
     uint8_t           isTimerWithFourCC;
-    uint32_t          targetPulses;
-    uint32_t          emittedPulses;
-    uint32_t          remainingPulses;
+    volatile uint32_t targetPulses;
+    volatile uint32_t emittedPulses;
+    volatile uint32_t remainingPulses;
     uint32_t          periodCounts;
     GPTIMER_Regs     *timerInst;
     uint8_t           ccIndex;
@@ -122,12 +125,24 @@ static void GimbalStepper_ComputeDirection(GimbalAxisCtrl_t *axis,
     }
 }
 
+/* Full hardware stop: disable NVIC, disable all timer interrupts, stop counter,
+ * clear all interrupt status, clear NVIC pending. */
 static void GimbalStepper_StopHardware(GimbalAxisCtrl_t *axis, IRQn_Type irq)
 {
     NVIC_DisableIRQ(irq);
+
+    DL_TimerA_disableInterrupt(axis->timerInst,
+        DL_TIMER_INTERRUPT_ZERO_EVENT |
+        DL_TIMER_INTERRUPT_CC0_DN_EVENT |
+        DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+
     DL_TimerA_stopCounter(axis->timerInst);
+
     DL_TimerA_clearInterruptStatus(axis->timerInst,
-        DL_TIMER_INTERRUPT_ZERO_EVENT | DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+        DL_TIMER_INTERRUPT_ZERO_EVENT |
+        DL_TIMER_INTERRUPT_CC0_DN_EVENT |
+        DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+
     NVIC_ClearPendingIRQ(irq);
 }
 
@@ -183,11 +198,15 @@ static void GimbalStepper_InitAxis(GimbalAxisCtrl_t *axis,
 
 #if GIMBAL_USE_ENABLE_GPIO
     DL_GPIO_initDigitalOutput(
-        (axis == &s_axisX) ? GPIO_GIMBAL_X_EN_IOMUX : GPIO_GIMBAL_Y_EN_IOMUX);
+        (axis == &s_axisX) ? GIMBAL_X_EN_IOMUX : GIMBAL_Y_EN_IOMUX);
     GimbalStepper_WriteEN(axis, 0U);
 #endif
 }
 
+/*
+ * Full timer reconfiguration for StartMove:
+ * Stop → disable all interrupts → clear status → reconfigure → enable ZERO only.
+ */
 static void GimbalStepper_ConfigTimer(GPTIMER_Regs *timerInst,
     uint32_t periodCounts, uint8_t isTimerWithFourCC, uint8_t ccIndex)
 {
@@ -204,6 +223,17 @@ static void GimbalStepper_ConfigTimer(GPTIMER_Regs *timerInst,
     };
 
     DL_TimerA_stopCounter(timerInst);
+
+    DL_TimerA_disableInterrupt(timerInst,
+        DL_TIMER_INTERRUPT_ZERO_EVENT |
+        DL_TIMER_INTERRUPT_CC0_DN_EVENT |
+        DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+
+    DL_TimerA_clearInterruptStatus(timerInst,
+        DL_TIMER_INTERRUPT_ZERO_EVENT |
+        DL_TIMER_INTERRUPT_CC0_DN_EVENT |
+        DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+
     DL_TimerA_setClockConfig(timerInst, &clkCfg);
     DL_TimerA_initPWMMode(timerInst, &pwmCfg);
     DL_TimerA_setCaptureCompareOutCtl(timerInst,
@@ -215,18 +245,13 @@ static void GimbalStepper_ConfigTimer(GPTIMER_Regs *timerInst,
         DL_TIMER_CC_UPDATE_METHOD_IMMEDIATE, ccIndex);
     DL_TimerA_setCaptureCompareValue(timerInst, periodCounts, ccIndex);
     DL_TimerA_setCCPDirection(timerInst, DL_TIMER_CC0_OUTPUT);
-    DL_TimerA_clearInterruptStatus(timerInst,
-        DL_TIMER_INTERRUPT_ZERO_EVENT | DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+
     DL_TimerA_enableInterrupt(timerInst, DL_TIMER_INTERRUPT_ZERO_EVENT);
     DL_TimerA_enableClock(timerInst);
 }
 
 void GimbalStepper_Init(void)
 {
-    DL_TimerA_reset(TIMA1);
-    DL_TimerA_enablePower(TIMA1);
-    delay_cycles(POWER_STARTUP_DELAY);
-
     GimbalStepper_InitAxis(&s_axisX, TIMA0, 1U,
         GIMBAL_X_STEP_IOMUX, GIMBAL_X_STEP_IOMUX_FUNC,
         GIMBAL_X_STEP_PORT, GIMBAL_X_STEP_PIN,
@@ -267,10 +292,16 @@ uint8_t GimbalStepper_StartMove(GimbalAxis_t axis,
         return 0U;
     }
 
-    if (pulseCount == 0U || frequencyHz == 0U) { return 0U; }
+    if (pulseCount == 0U) { return 0U; }
+    if (frequencyHz < GIMBAL_STEP_FREQ_MIN_HZ ||
+        frequencyHz > GIMBAL_STEP_FREQ_MAX_HZ)
+    {
+        return 0U;
+    }
 
     period = GIMBAL_PERIOD_COUNTS(frequencyHz);
     if (period < 2U) { return 0U; }
+    if (period > 65535U) { return 0U; }
 
     primask = __get_PRIMASK();
     __disable_irq();
@@ -295,6 +326,19 @@ uint8_t GimbalStepper_StartMove(GimbalAxis_t axis,
 
     GimbalStepper_WriteEN(pAxis, 1U);
 
+    /* Step 1-4: stop timer, disable all ints, clear status */
+    DL_TimerA_stopCounter(pAxis->timerInst);
+    DL_TimerA_disableInterrupt(pAxis->timerInst,
+        DL_TIMER_INTERRUPT_ZERO_EVENT |
+        DL_TIMER_INTERRUPT_CC0_DN_EVENT |
+        DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+    DL_TimerA_clearInterruptStatus(pAxis->timerInst,
+        DL_TIMER_INTERRUPT_ZERO_EVENT |
+        DL_TIMER_INTERRUPT_CC0_DN_EVENT |
+        DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+    NVIC_ClearPendingIRQ(GimbalStepper_GetIRQn(axis));
+
+    /* Step 5: reconfigure period + duty */
     GimbalStepper_ConfigTimer(pAxis->timerInst, period,
         pAxis->isTimerWithFourCC, pAxis->ccIndex);
     DL_TimerA_setCaptureCompareValue(pAxis->timerInst,
@@ -302,9 +346,7 @@ uint8_t GimbalStepper_StartMove(GimbalAxis_t axis,
 
     GimbalStepper_ForceStepPeripheral(pAxis);
 
-    DL_TimerA_clearInterruptStatus(pAxis->timerInst,
-        DL_TIMER_INTERRUPT_ZERO_EVENT | DL_TIMER_INTERRUPT_CC0_UP_EVENT);
-    NVIC_ClearPendingIRQ(GimbalStepper_GetIRQn(axis));
+    /* Step 6-7: enable ZERO only, start counter */
     NVIC_EnableIRQ(GimbalStepper_GetIRQn(axis));
     DL_TimerA_startCounter(pAxis->timerInst);
 
@@ -352,8 +394,16 @@ uint8_t GimbalStepper_IsBusy(GimbalAxis_t axis)
 uint32_t GimbalStepper_GetRemainingPulses(GimbalAxis_t axis)
 {
     GimbalAxisCtrl_t *pAxis = GimbalStepper_GetAxis(axis);
+    uint32_t val;
+    uint32_t primask;
+
     if (pAxis == (GimbalAxisCtrl_t *)0) { return 0U; }
-    return pAxis->remainingPulses;
+
+    primask = __get_PRIMASK();
+    __disable_irq();
+    val = pAxis->remainingPulses;
+    if (primask == 0U) { __enable_irq(); }
+    return val;
 }
 
 uint8_t GimbalStepper_IsDone(GimbalAxis_t axis)
@@ -385,12 +435,18 @@ void GimbalStepper_ClearDone(GimbalAxis_t axis)
 }
 
 /*
- * ISR: Two-stage stop for exact pulse count.
- * Zero event  = rising  edge of a new pulse.
- * CC0 compare = falling edge completing the current pulse.
+ * ISR: two-stage finite pulse stop (down-counting edge-aligned PWM).
  *
- * Stage 1 (zero event): emitted reaches target → disable zero int, arm CC0 int.
- * Stage 2 (CC0 compare): last pulse's falling edge done → stop hardware, set done.
+ * ZERO event  (DL_TIMER_IIDX_ZERO):
+ *   Counter reaches 0, reloads to (period-1), output goes HIGH.
+ *   Each ZERO = 1 physical STEP rising edge.
+ *
+ * CC0_DN event (DL_TIMER_IIDX_CC0_DN):
+ *   Counter reaches compare value during down-count, output goes LOW.
+ *   Marks falling edge completing the current pulse.
+ *
+ * Stage 1 (ZERO): emitted reaches target → disable ZERO, arm CC0_DN.
+ * Stage 2 (CC0_DN): last pulse's falling edge complete → full stop, set done.
  */
 static void GimbalStepper_ISR(GimbalAxisCtrl_t *pAxis, IRQn_Type irq)
 {
@@ -411,12 +467,12 @@ static void GimbalStepper_ISR(GimbalAxisCtrl_t *pAxis, IRQn_Type irq)
                 DL_TimerA_clearInterruptStatus(pAxis->timerInst,
                     DL_TIMER_INTERRUPT_ZERO_EVENT);
                 DL_TimerA_enableInterrupt(pAxis->timerInst,
-                    DL_TIMER_INTERRUPT_CC0_UP_EVENT);
+                    DL_TIMER_INTERRUPT_CC0_DN_EVENT);
                 pAxis->stopPending = 1U;
             }
             break;
 
-        case DL_TIMER_IIDX_CC0_UP:
+        case DL_TIMER_IIDX_CC0_DN:
             if (pAxis->stopPending != 0U)
             {
                 GimbalStepper_StopHardware(pAxis, irq);
