@@ -318,16 +318,16 @@
 /* If LED2 uses a 10k series resistor, visible brightness may be low. */
 
 /* ---------------- Keys, active low with internal pull-up ---------------- */
-#define KEY1_PORT                       GPIO_KEYS_KEY1_PORT  /* B14 / SW1 */
+#define KEY1_PORT                       GPIO_KEYS_KEY1_PORT  /* PB22 / SW1 */
 #define KEY1_PIN                        GPIO_KEYS_KEY1_PIN
 #define KEY1                            KEY1_PIN
-#define KEY2_PORT                       GPIO_KEYS_KEY2_PORT  /* B11 / SW2 */
+#define KEY2_PORT                       GPIO_KEYS_KEY2_PORT  /* PA30 / SW2 */
 #define KEY2_PIN                        GPIO_KEYS_KEY2_PIN
 #define KEY2                            KEY2_PIN
-#define KEY3_PORT                       GPIO_KEYS_KEY3_PORT  /* B27 / SW3 */
+#define KEY3_PORT                       GPIO_KEYS_KEY3_PORT  /* PB27 / SW3 */
 #define KEY3_PIN                        GPIO_KEYS_KEY3_PIN
 #define KEY3                            KEY3_PIN
-#define KEY4_PORT                       GPIO_KEYS_KEY4_PORT  /* B26 / SW4 */
+#define KEY4_PORT                       GPIO_KEYS_KEY4_PORT  /* PB26 / SW4 */
 #define KEY4_PIN                        GPIO_KEYS_KEY4_PIN
 #define KEY4                            KEY4_PIN
 
@@ -340,13 +340,16 @@
 #define KEY_K4_PORT                     KEY4_PORT
 #define KEY_K4_PIN                      KEY4_PIN
 
-/* ---------------- Servo PWM ----------------
+/* ---------------- Servo PWM (DEPRECATED, kept for reference) ----------------
  * TIMA0 C0..C3, 50Hz, 20ms period, default output disabled unless test macro
  * enables a center pulse.
  * SERVO1_PWM -> PA21 / TIMA0-C0, SERVO2_PWM -> PA22 / TIMA0-C1,
  * SERVO3_PWM -> PA15 / TIMA0-C2, SERVO4_PWM -> PA17 / TIMA0-C3.
  * Use an independent high-current servo supply and common ground with the
  * MSPM0 board.
+ *
+ * NOTE: When ECAR_GIMBAL_STEP_TEST_MODE == 1, TIMA0-C0 is repurposed as
+ * X STEP and TIMA1-C0 is used for Y STEP.  Servo.c is not called.
  */
 #define SERVO_PWM_TIMER_INST            PWM_SERVO_INST
 #define SERVO_PWM_PERIOD_US             20000U
@@ -361,6 +364,41 @@
 #define SERVO2_PWM                      SERVO2_PWM_CC_INDEX
 #define SERVO3_PWM                      SERVO3_PWM_CC_INDEX
 #define SERVO4_PWM                      SERVO4_PWM_CC_INDEX
+
+/* ---------------- Gimbal stepper motor pins ----------------
+ * X STEP: PA21 / TIMA0-C0,  X DIR: PB15 / GPIO
+ * Y STEP: PA15 / TIMA1-C0,  Y DIR: PB16 / GPIO
+ * X EN:   PB18 (reserved), Y EN:   PB25 (reserved)
+ */
+#define GIMBAL_X_STEP_PORT              GPIOA
+#define GIMBAL_X_STEP_PIN               DL_GPIO_PIN_21
+#define GIMBAL_X_STEP_IOMUX             IOMUX_PINCM46
+#define GIMBAL_X_STEP_IOMUX_FUNC        IOMUX_PINCM46_PF_TIMA0_CCP0
+#define GIMBAL_X_STEP_TIMER_INST        TIMA0
+#define GIMBAL_X_STEP_CC_INDEX          DL_TIMER_CC_0_INDEX
+
+#define GIMBAL_X_DIR_PORT               GPIOB
+#define GIMBAL_X_DIR_PIN                DL_GPIO_PIN_15
+#define GIMBAL_X_DIR_IOMUX              IOMUX_PINCM41
+
+#define GIMBAL_Y_STEP_PORT              GPIOA
+#define GIMBAL_Y_STEP_PIN               DL_GPIO_PIN_15
+#define GIMBAL_Y_STEP_IOMUX             IOMUX_PINCM37
+#define GIMBAL_Y_STEP_IOMUX_FUNC        IOMUX_PINCM37_PF_TIMA1_CCP0
+#define GIMBAL_Y_STEP_TIMER_INST        TIMA1
+#define GIMBAL_Y_STEP_CC_INDEX          DL_TIMER_CC_0_INDEX
+
+#define GIMBAL_Y_DIR_PORT               GPIOB
+#define GIMBAL_Y_DIR_PIN                DL_GPIO_PIN_16
+#define GIMBAL_Y_DIR_IOMUX              IOMUX_PINCM42
+
+#define GIMBAL_X_EN_PORT                GPIOB
+#define GIMBAL_X_EN_PIN                 DL_GPIO_PIN_18
+#define GIMBAL_Y_EN_PORT                GPIOB
+#define GIMBAL_Y_EN_PIN                 DL_GPIO_PIN_25
+
+#define GIMBAL_STEP_TIMER_CLK_FREQ_HZ   1000000U
+#define GIMBAL_STEP_TIMER_PRESCALE      31U
 
 /* ---------------- UARTs ----------------
  * UART_DEBUG uses the schematic TX1/RX1 connector:

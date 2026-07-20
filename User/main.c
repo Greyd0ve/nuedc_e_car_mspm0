@@ -18,6 +18,11 @@
 #include "cmsis_compiler.h"
 #include <stdint.h>
 
+#if ECAR_GIMBAL_STEP_TEST_MODE
+#include "GimbalStepper.h"
+#include "app_gimbal_step_test.h"
+#endif
+
 volatile uint8_t g_task_1ms_count = 0U;
 volatile uint8_t g_task_5ms_count = 0U;
 volatile uint8_t g_task_10ms_count = 0U;
@@ -107,21 +112,28 @@ int main(void)
     Encoder_Init();
     BeepLed_Init();
     Serial_Init();
+
+#if ECAR_GIMBAL_STEP_TEST_MODE
+    GimbalStepTest_Init();
+#else
     Servo_Init();
     App_Control_Init();
     ECar_Init();
     ECar_Serial_Init();
+#endif
 
 #if ECAR_OLED_ENABLE
     OLED_Init();
     OLED_Clear();
 #endif
 
-#if ECAR_TEST_IMU_ENABLE
+#if ECAR_IMU_ENABLE
     IMU_Init();
 #endif
 
-#if ECAR_BOARD_TEST_MODE
+#if ECAR_GIMBAL_STEP_TEST_MODE
+    /* No additional init in step test mode. */
+#elif ECAR_BOARD_TEST_MODE
     BoardTest_Init();
 #else
     App_Line_GPIOForceInit();
@@ -139,10 +151,12 @@ int main(void)
         (void)Main_TakeTaskCounterAll(&g_task_1ms_count);
 
         taskCount = Main_TakeTaskCounterAll(&g_task_5ms_count);
+#if !ECAR_GIMBAL_STEP_TEST_MODE
         if (taskCount > 0U)
         {
             App_Control_UpdateEncoderSpeed((uint16_t)taskCount * ECAR_ENCODER_SPEED_PERIOD_MS);
         }
+#endif
 
         taskCount = Main_TakeTaskCounterAll(&g_task_10ms_count);
         if (taskCount > 2U)
@@ -151,7 +165,9 @@ int main(void)
         }
         while (taskCount > 0U)
         {
-#if ECAR_BOARD_TEST_MODE
+#if ECAR_GIMBAL_STEP_TEST_MODE
+            /* No car control in step test mode. */
+#elif ECAR_BOARD_TEST_MODE
             BoardTest_Task10ms();
 #else
             ECar_Control10ms();
@@ -159,14 +175,21 @@ int main(void)
             taskCount--;
         }
 
-#if !ECAR_BOARD_TEST_MODE
+#if ECAR_GIMBAL_STEP_TEST_MODE
+        GimbalStepTest_KeyProcess();
+#elif !ECAR_BOARD_TEST_MODE
         ECar_KeyProcess();
 #endif
+
+#if !ECAR_GIMBAL_STEP_TEST_MODE
         ECar_SerialProcess();
+#endif
 
         if (Main_TakeTaskCounterAll(&g_task_100ms_count) > 0U)
         {
-#if ECAR_BOARD_TEST_MODE
+#if ECAR_GIMBAL_STEP_TEST_MODE
+            /* No 100ms task in step test mode. */
+#elif ECAR_BOARD_TEST_MODE
             BoardTest_Task100ms();
 #else
             ECar_SerialPlot100ms();
@@ -175,7 +198,9 @@ int main(void)
 
         if (Main_TakeTaskCounterAll(&g_task_200ms_count) > 0U)
         {
-#if ECAR_BOARD_TEST_MODE
+#if ECAR_GIMBAL_STEP_TEST_MODE
+            /* No 200ms task in step test mode. */
+#elif ECAR_BOARD_TEST_MODE
             BoardTest_Task200ms();
 #elif ECAR_OLED_ENABLE
             ECar_ShowStatus();

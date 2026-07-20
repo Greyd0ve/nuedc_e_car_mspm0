@@ -442,6 +442,11 @@
               <FileType>1</FileType>
               <FilePath>..\App\app_board_test.c</FilePath>
             </File>
+            <File>
+              <FileName>app_gimbal_step_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_gimbal_step_test.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -511,6 +516,11 @@
               <FileName>Board_Config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Hardware\Board_Config.h</FilePath>
+            </File>
+            <File>
+              <FileName>GimbalStepper.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\GimbalStepper.c</FilePath>
             </File>
           </Files>
         </Group>

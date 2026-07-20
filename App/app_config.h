@@ -29,6 +29,9 @@
 #ifndef ECAR_TEST_OLED_ENABLE
 #define ECAR_TEST_OLED_ENABLE                   0
 #endif
+#ifndef ECAR_IMU_ENABLE
+#define ECAR_IMU_ENABLE                         1
+#endif
 #ifndef ECAR_TEST_IMU_ENABLE
 #define ECAR_TEST_IMU_ENABLE                    0
 #endif
@@ -102,6 +105,39 @@
 #endif
 #ifndef ECAR_BOARD_TEST_PWM_LIMIT
 #define ECAR_BOARD_TEST_PWM_LIMIT               260
+#endif
+
+/* Gimbal stepper test mode. */
+#ifndef ECAR_GIMBAL_STEP_TEST_MODE
+#define ECAR_GIMBAL_STEP_TEST_MODE              1U
+#endif
+
+/* Stepper motor physical parameters. */
+#define GIMBAL_MOTOR_FULL_STEPS_PER_REV         200U
+#define GIMBAL_MICROSTEP                        16U
+#define GIMBAL_PULSES_PER_REV \
+    (GIMBAL_MOTOR_FULL_STEPS_PER_REV * GIMBAL_MICROSTEP)
+
+#define GIMBAL_TEST_ANGLE_DEG                   45U
+#define GIMBAL_TEST_PULSES \
+    ((GIMBAL_PULSES_PER_REV * GIMBAL_TEST_ANGLE_DEG) / 360U)
+
+#define GIMBAL_TEST_STEP_FREQ_HZ                500U
+
+/* Direction level configurable per axis. */
+#define GIMBAL_X_POSITIVE_DIR_LEVEL             1U
+#define GIMBAL_Y_POSITIVE_DIR_LEVEL             1U
+
+/* EN GPIO gate. Set to 1U when hardware wiring is confirmed. */
+#ifndef GIMBAL_USE_ENABLE_GPIO
+#define GIMBAL_USE_ENABLE_GPIO                  0U
+#endif
+#if GIMBAL_USE_ENABLE_GPIO
+#define GIMBAL_X_EN_PORT                        GPIOB
+#define GIMBAL_X_EN_PIN                         DL_GPIO_PIN_18
+#define GIMBAL_Y_EN_PORT                        GPIOB
+#define GIMBAL_Y_EN_PIN                         DL_GPIO_PIN_25
+#define GIMBAL_EN_ACTIVE_LEVEL                  1U
 #endif
 
 #endif

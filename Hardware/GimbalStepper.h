@@ -1,0 +1,28 @@
+#ifndef __GIMBAL_STEPPER_H
+#define __GIMBAL_STEPPER_H
+
+#include <stdint.h>
+
+typedef enum
+{
+    GIMBAL_AXIS_X = 0,
+    GIMBAL_AXIS_Y
+} GimbalAxis_t;
+
+void GimbalStepper_Init(void);
+
+uint8_t GimbalStepper_StartMove(
+    GimbalAxis_t axis,
+    int8_t direction,
+    uint32_t pulseCount,
+    uint32_t frequencyHz);
+
+void GimbalStepper_Stop(GimbalAxis_t axis);
+void GimbalStepper_StopAll(void);
+uint8_t GimbalStepper_IsBusy(GimbalAxis_t axis);
+uint32_t GimbalStepper_GetRemainingPulses(GimbalAxis_t axis);
+
+uint8_t GimbalStepper_IsDone(GimbalAxis_t axis);
+void GimbalStepper_ClearDone(GimbalAxis_t axis);
+
+#endif
