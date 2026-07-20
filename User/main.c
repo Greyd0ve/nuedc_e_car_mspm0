@@ -70,7 +70,7 @@ static void Main_PrintfSingleFieldTest(void)
 #endif
 
 #if ECAR_AIM_LINK_TEST_MODE
-static void Main_PrintAimDebug1000ms(void)
+static void Main_PrintAimDebug500ms(void)
 {
     AimObservation_t obs;
     AimProtocolStats_t stats;
@@ -85,12 +85,15 @@ static void Main_PrintAimDebug1000ms(void)
     {
         age = AimLink_GetObservationAgeMs();
 
-        Serial_Printf("[aim,health,%s,ok,%lu,crc,%lu,seq,%u,state,%u,flags,%02X",
+        Serial_Printf("[aim,health,%s,selftest,%s,ok,%lu,candidate,%lu,crc,%lu,field,%lu,seq,%u,state,%u,flags,%02X",
             (health == AIM_LINK_FRESH) ? "FRESH" :
             (health == AIM_LINK_DEGRADED) ? "DEGRADED" :
             (health == AIM_LINK_STALE) ? "STALE" : "FAULT",
+            (stats.selfTestPassed) ? "PASS" : "FAIL",
             (unsigned long)stats.validFrames,
+            (unsigned long)stats.frameCandidates,
             (unsigned long)stats.crcErrors,
+            (unsigned long)stats.fieldErrors,
             (unsigned int)obs.sequence,
             (unsigned int)obs.trackingState,
             (unsigned int)obs.validFlags);
@@ -109,19 +112,27 @@ static void Main_PrintAimDebug1000ms(void)
             Serial_Printf(",err,NA");
         }
 
-        Serial_Printf(",age,%lu,drop,%lu,dup,%lu,old,%lu,rebase,%lu,ovf,%lu]\r\n",
+        Serial_Printf(",age,%lu,drop,%lu,dup,%lu,old,%lu,rebase,%lu,resync,%lu,guard,%lu,ovf,%lu]\r\n",
             (unsigned long)age,
             (unsigned long)stats.droppedFrames,
             (unsigned long)stats.duplicateFrames,
             (unsigned long)stats.outOfOrderFrames,
             (unsigned long)stats.sequenceRebases,
+            (unsigned long)stats.headerResyncs,
+            (unsigned long)stats.parserGuardResets,
             (unsigned long)K230Uart_GetOverflowCount());
     }
     else
     {
-        Serial_Printf("[aim,health,%s,crc,%lu,ovf,%lu]\r\n",
+        Serial_Printf("[aim,health,%s,selftest,%s,rxBytes,%lu,candidate,%lu,crc,%lu,field,%lu,resync,%lu,guard,%lu,ovf,%lu]\r\n",
             (health == AIM_LINK_NO_SIGNAL) ? "NO_SIGNAL" : "?",
+            (stats.selfTestPassed) ? "PASS" : "FAIL",
+            (unsigned long)stats.rxBytes,
+            (unsigned long)stats.frameCandidates,
             (unsigned long)stats.crcErrors,
+            (unsigned long)stats.fieldErrors,
+            (unsigned long)stats.headerResyncs,
+            (unsigned long)stats.parserGuardResets,
             (unsigned long)K230Uart_GetOverflowCount());
     }
 }
@@ -261,7 +272,7 @@ int main(void)
                 if (aimPrintDivider >= 5U)
                 {
                     aimPrintDivider = 0U;
-                    Main_PrintAimDebug1000ms();
+                    Main_PrintAimDebug500ms();
                 }
             }
 #elif ECAR_GIMBAL_STEP_TEST_MODE

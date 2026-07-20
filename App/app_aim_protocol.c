@@ -270,11 +270,11 @@ static void AimProtocol_ResyncFromFailedFrame(void)
     s_stats.headerResyncs++;
 
     /*
-     * Search for a complete 0xAA 0x55 pair in the failed frame.
-     * If found at position i, move frame[i..21] to frame[0..remain-1]
-     * and continue COLLECT from index=remain.
+     * Start from index 1 (NOT 0) because index 0 is always the failed
+     * frame's own AA 55 header.  Matching i=0 would give remain=22
+     * and cause the next byte to write s_frame[22] (out of bounds).
      */
-    for (i = 0U; i < (AIM_FRAME_SIZE - 1U); i++)
+    for (i = 1U; i < (AIM_FRAME_SIZE - 1U); i++)
     {
         if (s_frame[i] == AIM_HEADER0 && s_frame[i + 1U] == AIM_HEADER1)
         {
@@ -293,7 +293,8 @@ static void AimProtocol_ResyncFromFailedFrame(void)
     }
 
     /*
-     * No complete AA 55 found. Check if the last byte is a lone 0xAA.
+     * No complete AA 55 found in the payload. Check if the last byte
+     * is a lone 0xAA that could be the start of the next frame.
      */
     if (s_frame[AIM_FRAME_SIZE - 1U] == AIM_HEADER0)
     {
@@ -313,12 +314,12 @@ void AimProtocol_Init(void)
     uint16_t i;
 
     for (i = 0U; i < AIM_FRAME_SIZE; i++) { s_frame[i] = 0U; }
-    s_frameIndex           = 0U;
-    s_parseState           = AIM_PARSE_WAIT_HEADER0;
-    s_hasLatest            = 0U;
-    s_hasLastSequence      = 0U;
-    s_lastSequence         = 0U;
-    s_lastAcceptedRxTimeMs = 0U;
+    s_frameIndex            = 0U;
+    s_parseState            = AIM_PARSE_WAIT_HEADER0;
+    s_hasLatest             = 0U;
+    s_hasLastSequence       = 0U;
+    s_lastSequence          = 0U;
+    s_lastAcceptedRxTimeMs  = 0U;
 
     for (i = 0U; i < (uint16_t)sizeof(s_latest); i++)
     {
@@ -368,6 +369,18 @@ void AimProtocol_Process(void)
                 break;
 
             case AIM_PARSE_COLLECT:
+                /*
+                 * Guard: NEVER write beyond s_frame[21].
+                 * If index is already out of bounds, discard and restart.
+                 */
+                if (s_frameIndex >= AIM_FRAME_SIZE)
+                {
+                    s_stats.parserGuardResets++;
+                    s_frameIndex = 0U;
+                    s_parseState = AIM_PARSE_WAIT_HEADER0;
+                    break;
+                }
+
                 s_frame[s_frameIndex] = byte;
                 s_frameIndex++;
 
@@ -381,6 +394,17 @@ void AimProtocol_Process(void)
                     else
                     {
                         AimProtocol_ResyncFromFailedFrame();
+                    }
+                    /*
+                     * After processing a complete frame (valid or failed),
+                     * state and frameIndex are set by AcceptFrame() or
+                     * ResyncFromFailedFrame().  If neither sets the state
+                     * (AcceptFrame does not reset), we MUST reset here.
+                     */
+                    if (s_parseState == AIM_PARSE_COLLECT)
+                    {
+                        s_frameIndex = 0U;
+                        s_parseState = AIM_PARSE_WAIT_HEADER0;
                     }
                 }
                 break;

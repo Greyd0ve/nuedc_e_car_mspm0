@@ -66,6 +66,7 @@ typedef struct
     uint32_t outOfOrderFrames;
     uint32_t droppedFrames;
     uint32_t sequenceRebases;
+    uint32_t parserGuardResets;
     uint8_t  selfTestPassed;
 } AimProtocolStats_t;
 
