@@ -20,6 +20,11 @@
 #if ECAR_AIM_LINK_TEST_MODE
 #include "app_aim_link.h"
 #include "K230Uart.h"
+#elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
+#include "app_aim_link.h"
+#include "K230Uart.h"
+#include "GimbalStepper.h"
+#include "app_visual_gimbal.h"
 #elif ECAR_GIMBAL_STEP_TEST_MODE
 #include "GimbalStepper.h"
 #include "app_gimbal_step_test.h"
@@ -138,6 +143,34 @@ static void Main_PrintAimDebug500ms(void)
 }
 #endif
 
+#if ECAR_VISUAL_GIMBAL_X_TEST_MODE
+static void Main_PrintVisualGimbalDebug500ms(void)
+{
+    VisualGimbalDebug_t vg;
+    AimProtocolStats_t  stats;
+
+    VisualGimbal_GetDebug(&vg);
+    AimLink_GetProtocolStats(&stats);
+
+    Serial_Printf("[vgx,state,%u,seq,%u,err,%d,dir,%d,pulse,%lu,pos,%ld,busy,%u,cmd,%lu,dead,%lu,invalid,%lu,limit,%lu,crc,%lu,field,%lu,guard,%lu,ovf,%lu]\r\n",
+        (unsigned int)vg.state,
+        (unsigned int)vg.sequence,
+        (int)vg.errorX,
+        (int)vg.direction,
+        (unsigned long)vg.commandPulses,
+        (long)vg.estimatedPositionPulses,
+        (unsigned int)GimbalStepper_IsBusy(GIMBAL_AXIS_X),
+        (unsigned long)vg.acceptedCommands,
+        (unsigned long)vg.deadbandFrames,
+        (unsigned long)vg.invalidFrames,
+        (unsigned long)vg.limitRejects,
+        (unsigned long)stats.crcErrors,
+        (unsigned long)stats.fieldErrors,
+        (unsigned long)stats.parserGuardResets,
+        (unsigned long)K230Uart_GetOverflowCount());
+}
+#endif
+
 int main(void)
 {
     SYSCFG_DL_init();
@@ -183,6 +216,10 @@ int main(void)
 
 #if ECAR_AIM_LINK_TEST_MODE
     AimLink_Init();
+#elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
+    AimLink_Init();
+    GimbalStepper_Init();
+    VisualGimbal_Init();
 #elif ECAR_GIMBAL_STEP_TEST_MODE
     GimbalStepTest_Init();
 #else
@@ -220,7 +257,7 @@ int main(void)
     {
         uint8_t taskCount;
 
-#if ECAR_AIM_LINK_TEST_MODE
+#if ECAR_AIM_LINK_TEST_MODE || ECAR_VISUAL_GIMBAL_X_TEST_MODE
         AimLink_Process();
 #endif
 
@@ -241,9 +278,11 @@ int main(void)
         }
         while (taskCount > 0U)
         {
-#if ECAR_AIM_LINK_TEST_MODE || ECAR_GIMBAL_STEP_TEST_MODE
+#if ECAR_AIM_LINK_TEST_MODE
             /* No car control */
-#elif ECAR_BOARD_TEST_MODE
+#elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
+            VisualGimbal_Task10ms();
+#elif ECAR_GIMBAL_STEP_TEST_MODE
             BoardTest_Task10ms();
 #else
             ECar_Control10ms();
@@ -251,15 +290,15 @@ int main(void)
             taskCount--;
         }
 
-#if ECAR_AIM_LINK_TEST_MODE
-        /* Key and serial not used in aim link test mode */
+#if ECAR_AIM_LINK_TEST_MODE || ECAR_VISUAL_GIMBAL_X_TEST_MODE
+        /* Key and serial not used */
 #elif ECAR_GIMBAL_STEP_TEST_MODE
         GimbalStepTest_KeyProcess();
 #elif !ECAR_BOARD_TEST_MODE
         ECar_KeyProcess();
 #endif
 
-#if !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE
+#if !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE && !ECAR_VISUAL_GIMBAL_X_TEST_MODE
         ECar_SerialProcess();
 #endif
 
@@ -273,6 +312,16 @@ int main(void)
                 {
                     aimPrintDivider = 0U;
                     Main_PrintAimDebug500ms();
+                }
+            }
+#elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
+            {
+                static uint8_t vgPrintDivider = 0U;
+                vgPrintDivider++;
+                if (vgPrintDivider >= 5U)
+                {
+                    vgPrintDivider = 0U;
+                    Main_PrintVisualGimbalDebug500ms();
                 }
             }
 #elif ECAR_GIMBAL_STEP_TEST_MODE

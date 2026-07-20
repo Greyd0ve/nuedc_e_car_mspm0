@@ -111,15 +111,41 @@
 
 /* K230 aim link communication test mode. */
 #ifndef ECAR_AIM_LINK_TEST_MODE
-#define ECAR_AIM_LINK_TEST_MODE                 1U
+#define ECAR_AIM_LINK_TEST_MODE                 0U
 #endif
 
-#if (ECAR_AIM_LINK_TEST_MODE == 1U) && (ECAR_GIMBAL_STEP_TEST_MODE == 1U)
-#error "Aim link test and gimbal step test cannot run together"
+/* Visual gimbal X-axis single-pulse test (web vision → stepper). */
+#ifndef ECAR_VISUAL_GIMBAL_X_TEST_MODE
+#define ECAR_VISUAL_GIMBAL_X_TEST_MODE          1U
 #endif
-#if (ECAR_AIM_LINK_TEST_MODE == 1U) && (ECAR_BOARD_TEST_MODE == 1U)
-#error "Aim link test and board test cannot run together"
+
+#if (ECAR_VISUAL_GIMBAL_X_TEST_MODE == 1U) && (ECAR_AIM_LINK_TEST_MODE == 1U)
+#error "Visual gimbal X test and aim link test cannot run together"
 #endif
+#if (ECAR_VISUAL_GIMBAL_X_TEST_MODE == 1U) && (ECAR_GIMBAL_STEP_TEST_MODE == 1U)
+#error "Visual gimbal X test and gimbal step test cannot run together"
+#endif
+#if (ECAR_VISUAL_GIMBAL_X_TEST_MODE == 1U) && (ECAR_BOARD_TEST_MODE == 1U)
+#error "Visual gimbal X test and board test cannot run together"
+#endif
+#if (ECAR_VISUAL_GIMBAL_X_TEST_MODE == 1U) && (ECAR_ENCODER_MINIMAL_DEBUG == 1U)
+#error "Visual gimbal X test and encoder debug cannot run together"
+#endif
+
+/* Visual-to-stepper X-axis parameters. */
+#define AIM_X_DEADBAND_PX                       5
+#define AIM_X_SOFT_LIMIT_PULSES                 400
+#define AIM_X_TEST_STEP_FREQ_HZ                 300U
+#define AIM_X_MAX_SINGLE_PULSES                 20U
+
+/*
+ * AIM_X_ERROR_POSITIVE_DIR: 1 = logical positive, -1 = logical negative.
+ *   errorX = rect_x - laser_x > 0 → call StartMove with this direction.
+ *   errorX < 0 → use opposite direction.
+ *   Invert this macro (between 1 and -1) if real motion direction
+ *   is wrong; do NOT modify GIMBAL_X_POSITIVE_DIR_LEVEL.
+ */
+#define AIM_X_ERROR_POSITIVE_DIR        1
 
 /* Stepper motor physical parameters. */
 #define GIMBAL_MOTOR_FULL_STEPS_PER_REV         200U
@@ -135,6 +161,11 @@
 
 #define GIMBAL_STEP_FREQ_MIN_HZ                 100U
 #define GIMBAL_STEP_FREQ_MAX_HZ                 5000U
+
+#if (AIM_X_TEST_STEP_FREQ_HZ < GIMBAL_STEP_FREQ_MIN_HZ) || \
+    (AIM_X_TEST_STEP_FREQ_HZ > GIMBAL_STEP_FREQ_MAX_HZ)
+#error AIM_X_TEST_STEP_FREQ_HZ out of range
+#endif
 
 /* Direction level configurable per axis. Valid: 0U or 1U. */
 #define GIMBAL_X_POSITIVE_DIR_LEVEL             1U

@@ -443,6 +443,11 @@
               <FilePath>..\App\app_aim_protocol.c</FilePath>
             </File>
             <File>
+              <FileName>app_visual_gimbal.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_visual_gimbal.c</FilePath>
+            </File>
+            <File>
               <FileName>app_board_test.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\App\app_board_test.c</FilePath>
