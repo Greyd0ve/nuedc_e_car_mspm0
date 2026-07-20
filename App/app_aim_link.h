@@ -10,5 +10,6 @@ uint8_t AimLink_GetLatestObservation(AimObservation_t *outObservation);
 uint32_t AimLink_GetObservationAgeMs(void);
 uint8_t AimLink_IsFresh(uint32_t timeoutMs);
 void AimLink_GetProtocolStats(AimProtocolStats_t *outStats);
+AimLinkHealth_t AimLink_GetHealth(void);
 
 #endif

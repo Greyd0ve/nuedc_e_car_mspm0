@@ -70,20 +70,25 @@ static void Main_PrintfSingleFieldTest(void)
 #endif
 
 #if ECAR_AIM_LINK_TEST_MODE
-static void Main_PrintAimDebug500ms(void)
+static void Main_PrintAimDebug1000ms(void)
 {
     AimObservation_t obs;
     AimProtocolStats_t stats;
+    AimLinkHealth_t health;
     int16_t errX, errY;
     uint32_t age;
 
     AimLink_GetProtocolStats(&stats);
+    health = AimLink_GetHealth();
 
     if (AimLink_GetLatestObservation(&obs))
     {
         age = AimLink_GetObservationAgeMs();
 
-        Serial_Printf("[aim,ok,%lu,crc,%lu,seq,%u,state,%u,flags,%02X",
+        Serial_Printf("[aim,health,%s,ok,%lu,crc,%lu,seq,%u,state,%u,flags,%02X",
+            (health == AIM_LINK_FRESH) ? "FRESH" :
+            (health == AIM_LINK_DEGRADED) ? "DEGRADED" :
+            (health == AIM_LINK_STALE) ? "STALE" : "FAULT",
             (unsigned long)stats.validFrames,
             (unsigned long)stats.crcErrors,
             (unsigned int)obs.sequence,
@@ -104,16 +109,18 @@ static void Main_PrintAimDebug500ms(void)
             Serial_Printf(",err,NA");
         }
 
-        Serial_Printf(",age,%lu,drop,%lu,dup,%lu,old,%lu,ovf,%lu]\r\n",
+        Serial_Printf(",age,%lu,drop,%lu,dup,%lu,old,%lu,rebase,%lu,ovf,%lu]\r\n",
             (unsigned long)age,
             (unsigned long)stats.droppedFrames,
             (unsigned long)stats.duplicateFrames,
             (unsigned long)stats.outOfOrderFrames,
+            (unsigned long)stats.sequenceRebases,
             (unsigned long)K230Uart_GetOverflowCount());
     }
     else
     {
-        Serial_Printf("[aim,no_signal,crc,%lu,ovf,%lu]\r\n",
+        Serial_Printf("[aim,health,%s,crc,%lu,ovf,%lu]\r\n",
+            (health == AIM_LINK_NO_SIGNAL) ? "NO_SIGNAL" : "?",
             (unsigned long)stats.crcErrors,
             (unsigned long)K230Uart_GetOverflowCount());
     }
@@ -247,7 +254,17 @@ int main(void)
 
         if (Main_TakeTaskCounterAll(&g_task_100ms_count) > 0U)
         {
-#if ECAR_AIM_LINK_TEST_MODE || ECAR_GIMBAL_STEP_TEST_MODE
+#if ECAR_AIM_LINK_TEST_MODE
+            {
+                static uint8_t aimPrintDivider = 0U;
+                aimPrintDivider++;
+                if (aimPrintDivider >= 5U)
+                {
+                    aimPrintDivider = 0U;
+                    Main_PrintAimDebug1000ms();
+                }
+            }
+#elif ECAR_GIMBAL_STEP_TEST_MODE
             /* No 100ms task */
 #elif ECAR_BOARD_TEST_MODE
             BoardTest_Task100ms();
@@ -259,7 +276,7 @@ int main(void)
         if (Main_TakeTaskCounterAll(&g_task_200ms_count) > 0U)
         {
 #if ECAR_AIM_LINK_TEST_MODE
-            Main_PrintAimDebug500ms();
+            /* No 200ms task */
 #elif ECAR_GIMBAL_STEP_TEST_MODE
             /* No 200ms task */
 #elif ECAR_BOARD_TEST_MODE

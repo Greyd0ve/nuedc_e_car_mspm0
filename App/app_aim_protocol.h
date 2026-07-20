@@ -19,6 +19,8 @@
 #define AIM_FLAG_MEASUREMENT_FRESH  (1U << 3)
 #define AIM_FLAG_KNOWN_MASK         0x0FU
 
+#define AIM_SEQUENCE_REBASE_TIMEOUT_MS 1000U
+
 typedef enum
 {
     AIM_TRACK_LOST      = 0,
@@ -27,6 +29,15 @@ typedef enum
     AIM_TRACK_HOLD      = 3,
     AIM_TRACK_FAULT     = 4
 } AimTrackingState_t;
+
+typedef enum
+{
+    AIM_LINK_NO_SIGNAL = 0,
+    AIM_LINK_FRESH,
+    AIM_LINK_DEGRADED,
+    AIM_LINK_STALE,
+    AIM_LINK_FAULT
+} AimLinkHealth_t;
 
 typedef struct
 {
@@ -54,18 +65,18 @@ typedef struct
     uint32_t duplicateFrames;
     uint32_t outOfOrderFrames;
     uint32_t droppedFrames;
+    uint32_t sequenceRebases;
+    uint8_t  selfTestPassed;
 } AimProtocolStats_t;
 
 void AimProtocol_Init(void);
-
 void AimProtocol_Process(void);
 
 uint16_t AimProtocol_Crc16CcittFalse(const uint8_t *data, uint16_t length);
+uint8_t AimProtocol_RunSelfTest(void);
 
 uint8_t AimProtocol_GetLatest(AimObservation_t *outObservation);
-
 void AimProtocol_GetStats(AimProtocolStats_t *outStats);
-
 uint8_t AimProtocol_HasValidObservation(void);
 
 #endif
