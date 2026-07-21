@@ -203,6 +203,13 @@
 #error "AIM_Y_LOCK_CONFIRM_FRAMES must be non-zero"
 #endif
 
+#if (AIM_X_LOCK_CONFIRM_FRAMES > 255U)
+#error "AIM_X_LOCK_CONFIRM_FRAMES exceeds uint8_t counter range"
+#endif
+#if (AIM_Y_LOCK_CONFIRM_FRAMES > 255U)
+#error "AIM_Y_LOCK_CONFIRM_FRAMES exceeds uint8_t counter range"
+#endif
+
 /* Stepper motor physical parameters. */
 #define GIMBAL_MOTOR_FULL_STEPS_PER_REV         200U
 #define GIMBAL_MICROSTEP                        16U

@@ -30,6 +30,7 @@ typedef struct
     uint16_t sequence;
     uint32_t ageMs;
     uint8_t  globalFaultLatched;
+    uint8_t  xyLocked;
     uint32_t staleFrames;
     uint32_t invalidFrames;
     uint32_t skippedControlFrames;

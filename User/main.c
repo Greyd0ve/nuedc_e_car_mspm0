@@ -195,6 +195,21 @@ static void Main_PrintVisualGimbalDebug500ms(void)
 }
 #endif
 
+#if ECAR_VISUAL_GIMBAL_XY_TEST_MODE && ECAR_VISUAL_GIMBAL_XY_DEBUG_ENABLE
+static void Main_PrintVisualGimbalXYDebug1000ms(void)
+{
+    VisualGimbalXYDebug_t vg;
+    VisualGimbalXY_GetDebug(&vg);
+    Serial_Printf("[xy,s,%u,xe,%d,xp,%lu,ye,%d,yp,%lu,l,%u,f,%u,o,%lu]\r\n",
+        (unsigned int)vg.sequence,
+        (int)vg.x.filteredError, (unsigned long)vg.x.commandPulses,
+        (int)vg.y.filteredError, (unsigned long)vg.y.commandPulses,
+        (unsigned int)vg.xyLocked,
+        (unsigned int)vg.globalFaultLatched,
+        (unsigned long)K230Uart_GetOverflowCount());
+}
+#endif
+
 int main(void)
 {
     SYSCFG_DL_init();
@@ -357,7 +372,13 @@ int main(void)
             }
 #endif
 #elif ECAR_VISUAL_GIMBAL_XY_TEST_MODE
-            /* No 100ms task (debug disabled by default) */
+#if ECAR_VISUAL_GIMBAL_XY_DEBUG_ENABLE
+            {
+                static uint8_t pdiv = 0U;
+                pdiv++;
+                if (pdiv >= 10U) { pdiv = 0U; Main_PrintVisualGimbalXYDebug1000ms(); }
+            }
+#endif
 #elif ECAR_GIMBAL_STEP_TEST_MODE
             /* No 100ms task */
 #elif ECAR_BOARD_TEST_MODE
