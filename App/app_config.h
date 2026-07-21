@@ -104,36 +104,64 @@
 #define ECAR_BOARD_TEST_PWM_LIMIT               260
 #endif
 
-/* Gimbal stepper test mode. */
+/* ---- Unified application mode selection ---- */
+#define ECAR_APP_MODE_NONE           0U
+#define ECAR_APP_MODE_CAR_TUNING     1U
+#define ECAR_APP_MODE_VISION_TUNING  2U
+#define ECAR_APP_MODE_INTEGRATED     3U
+
+#ifndef ECAR_APP_MODE
+#define ECAR_APP_MODE                ECAR_APP_MODE_CAR_TUNING
+#endif
+
+#if (ECAR_APP_MODE > 3U)
+#error "ECAR_APP_MODE must be 0 (NONE), 1 (CAR_TUNING), 2 (VISION_TUNING), or 3 (INTEGRATED)"
+#endif
+
+/* Derived mode macros — do NOT define these individually */
+#define ECAR_CAR_TUNING_MODE        (ECAR_APP_MODE == ECAR_APP_MODE_CAR_TUNING)
+#define ECAR_VISUAL_GIMBAL_XY_TEST_MODE (ECAR_APP_MODE == ECAR_APP_MODE_VISION_TUNING)
+#define ECAR_E_TASK_MODE            (ECAR_APP_MODE == ECAR_APP_MODE_INTEGRATED)
+
+/* Legacy stub macros for special test modes */
 #ifndef ECAR_GIMBAL_STEP_TEST_MODE
-#define ECAR_GIMBAL_STEP_TEST_MODE              0U
+#define ECAR_GIMBAL_STEP_TEST_MODE    0U
 #endif
-
-/* K230 aim link communication test mode. */
 #ifndef ECAR_AIM_LINK_TEST_MODE
-#define ECAR_AIM_LINK_TEST_MODE                 0U
+#define ECAR_AIM_LINK_TEST_MODE       0U
 #endif
-
-/* Visual gimbal X-axis single-pulse test (web vision → stepper). */
 #ifndef ECAR_VISUAL_GIMBAL_X_TEST_MODE
-#define ECAR_VISUAL_GIMBAL_X_TEST_MODE          0U
+#define ECAR_VISUAL_GIMBAL_X_TEST_MODE 0U
+#endif
+#ifndef ECAR_BOARD_TEST_MODE
+#define ECAR_BOARD_TEST_MODE          0U
+#endif
+#ifndef ECAR_ENCODER_MINIMAL_DEBUG
+#define ECAR_ENCODER_MINIMAL_DEBUG    0U
 #endif
 
-/* Visual gimbal XY dual-axis closed-loop test (K230 vision → XY stepper). */
-#ifndef ECAR_VISUAL_GIMBAL_XY_TEST_MODE
-#define ECAR_VISUAL_GIMBAL_XY_TEST_MODE         0U
+/* Special test modes: require ECAR_APP_MODE == NONE */
+#if (ECAR_APP_MODE != ECAR_APP_MODE_NONE)
+#if (ECAR_GIMBAL_STEP_TEST_MODE + ECAR_AIM_LINK_TEST_MODE + \
+     ECAR_VISUAL_GIMBAL_X_TEST_MODE + ECAR_BOARD_TEST_MODE + \
+     ECAR_ENCODER_MINIMAL_DEBUG) != 0U
+#error "Special test modes require ECAR_APP_MODE = ECAR_APP_MODE_NONE"
+#endif
 #endif
 
-/* E-car task mode: visual aiming + tracking, integrated. */
-#ifndef ECAR_E_TASK_MODE
-#define ECAR_E_TASK_MODE                        1U
-#endif
-
-#if (ECAR_E_TASK_MODE + ECAR_VISUAL_GIMBAL_XY_TEST_MODE + \
-     ECAR_VISUAL_GIMBAL_X_TEST_MODE + ECAR_AIM_LINK_TEST_MODE + \
-     ECAR_GIMBAL_STEP_TEST_MODE + ECAR_BOARD_TEST_MODE + \
+/* Special test modes: only one at a time */
+#if (ECAR_GIMBAL_STEP_TEST_MODE + ECAR_AIM_LINK_TEST_MODE + \
+     ECAR_VISUAL_GIMBAL_X_TEST_MODE + ECAR_BOARD_TEST_MODE + \
      ECAR_ENCODER_MINIMAL_DEBUG) > 1U
-#error "Only one mode may be active at a time"
+#error "Only one special test mode may be active at a time"
+#endif
+
+/* NONE mode must have a reason */
+#if (ECAR_APP_MODE == ECAR_APP_MODE_NONE) && \
+    (ECAR_GIMBAL_STEP_TEST_MODE + ECAR_AIM_LINK_TEST_MODE + \
+     ECAR_VISUAL_GIMBAL_X_TEST_MODE + ECAR_BOARD_TEST_MODE + \
+     ECAR_ENCODER_MINIMAL_DEBUG) == 0U
+#error "ECAR_APP_MODE_NONE requires at least one special test mode"
 #endif
 
 /* Visual-to-stepper X-axis parameters. */
