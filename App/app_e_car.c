@@ -52,7 +52,7 @@ ECarParam_t g_eCarParam =
     TUNE_LINE_TURN_LIMIT_CMPS,
 
     ECAR_DEFAULT_LAP_PULSE,
-    90U
+    100U
 };
 
 volatile float g_forwardKp = 2.0f;
