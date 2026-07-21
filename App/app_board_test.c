@@ -9,7 +9,6 @@
 #include "Motor.h"
 #include "OLED.h"
 #include "Serial.h"
-#include "Servo.h"
 #include "app_control.h"
 #include <stdint.h>
 
@@ -44,6 +43,29 @@ static int32_t BoardTest_FloatToX10(float value)
     return (int32_t)(value * 10.0f - 0.5f);
 }
 
+static const char *BoardTest_X10Sign(int32_t value)
+{
+    return (value < 0) ? "-" : "";
+}
+
+static int32_t BoardTest_X10AbsWhole(int32_t value)
+{
+    if (value < 0)
+    {
+        value = -value;
+    }
+    return value / 10;
+}
+
+static int32_t BoardTest_X10AbsFrac(int32_t value)
+{
+    if (value < 0)
+    {
+        value = -value;
+    }
+    return value % 10;
+}
+
 static void BoardTest_PrintSpeedLoop(void)
 {
     Serial_Printf("[speed] target=%ld turn=%ld left=%ld right=%ld forward=%ld turnNow=%ld pwmL=%d pwmR=%d spwm=%ld dpwm=%ld\r\n",
@@ -57,6 +79,29 @@ static void BoardTest_PrintSpeedLoop(void)
         (int)g_rightPwm,
         (long)BoardTest_FloatToX10(g_speedPwm),
         (long)BoardTest_FloatToX10(g_diffPwm));
+}
+
+static void BoardTest_PrintIMUConfig(void)
+{
+    Serial_Printf("[imu-reg] pwr1=%02X pwr2=%02X smpl=%02X cfg=%02X gyro=%02X accel=%02X\r\n",
+        (unsigned int)IMU_GetLastConfigReg(0U),
+        (unsigned int)IMU_GetLastConfigReg(1U),
+        (unsigned int)IMU_GetLastConfigReg(2U),
+        (unsigned int)IMU_GetLastConfigReg(3U),
+        (unsigned int)IMU_GetLastConfigReg(4U),
+        (unsigned int)IMU_GetLastConfigReg(5U));
+}
+
+static void BoardTest_PrintIMUDiag(void)
+{
+    Serial_Printf("[imu-diag] nack=%lu timeout=%lu recover=%lu read_ok=%lu read_fail=%lu write_ok=%lu write_fail=%lu\r\n",
+        (unsigned long)IMU_GetNackCount(),
+        (unsigned long)IMU_GetTimeoutCount(),
+        (unsigned long)IMU_GetRecoverCount(),
+        (unsigned long)IMU_GetReadOkCount(),
+        (unsigned long)IMU_GetReadFailCount(),
+        (unsigned long)IMU_GetWriteOkCount(),
+        (unsigned long)IMU_GetWriteFailCount());
 }
 
 static uint8_t BoardTest_ReadKeyLevel(GPIO_Regs *port, uint32_t pin)
@@ -155,107 +200,21 @@ static void BoardTest_PrintEncoder(void)
 static void BoardTest_PrintIMU(void)
 {
 #if ECAR_TEST_IMU_ENABLE
-    uint8_t who = 0U;
-    uint8_t addr;
-
-    addr = IMU_GetAddr();
-
-    if (!IMU_ReadWhoAmI(&who))
-    {
-        uint8_t stage = IMU_GetLastErrorStage();
-        uint8_t ack68 = IMU_ProbeAddressAck(0x68U);
-        uint8_t ack69 = IMU_ProbeAddressAck(0x69U);
-        uint8_t foundAddr = 0U;
-
-        Serial_Printf("[imu-ack] 68=%u 69=%u\r\n",
-                      (unsigned int)ack68, (unsigned int)ack69);
-        Serial_Printf("[imu-bus] sda=%u scl=%u\r\n",
-                      (unsigned int)IMU_GetSdaLevel(),
-                      (unsigned int)IMU_GetSclLevel());
-
-        if (IMU_Scan(&foundAddr))
-        {
-            Serial_Printf("[imu-scan] found 0x%02X\r\n", (unsigned int)foundAddr);
-
-            {
-                uint8_t retryWho = 0U;
-                if (IMU_ReadWhoAmI(&retryWho))
-                {
-                    Serial_Printf("[imu] retry who=0x%02X addr=0x%02X ready=%u healthy=%u stage=%u name=%s\r\n",
-                                  (unsigned int)retryWho, (unsigned int)foundAddr,
-                                  (unsigned int)IMU_IsReady(),
-                                  (unsigned int)IMU_IsHealthy(),
-                                  (unsigned int)IMU_GetLastErrorStage(),
-                                  IMU_GetErrorStageName(IMU_GetLastErrorStage()));
-                }
-                else
-                {
-                    uint8_t retryStage = IMU_GetLastErrorStage();
-                    Serial_Printf("[imu] retry_fail addr=0x%02X stage=%u name=%s\r\n",
-                                  (unsigned int)foundAddr,
-                                  (unsigned int)retryStage,
-                                  IMU_GetErrorStageName(retryStage));
-                }
-            }
-        }
-        else
-        {
-            uint8_t addrValid;
-
-            addr = IMU_GetAddr();
-            addrValid = IMU_IsAddrValid();
-
-            if (!addrValid)
-            {
-                Serial_Printf("[imu] fail scan=none stage=%u name=%s\r\n",
-                              (unsigned int)stage, IMU_GetErrorStageName(stage));
-            }
-            else
-            {
-                Serial_Printf("[imu] fail addr=0x%02X stage=%u name=%s\r\n",
-                              (unsigned int)addr, (unsigned int)stage, IMU_GetErrorStageName(stage));
-            }
-        }
-        return;
-    }
-
     if (!IMU_IsReady())
     {
-        uint8_t stage = IMU_GetLastErrorStage();
+        uint8_t stage = IMU_GetInitErrorStage();
 
-        if (who != MPU6050_WHO_AM_I_VAL)
+        if (stage == 0U)
         {
-            Serial_Printf("[imu] who_mismatch who=0x%02X addr=0x%02X\r\n",
-                          (unsigned int)who, (unsigned int)addr);
+            stage = IMU_GetLastErrorStage();
         }
-        else
-        {
-            static uint8_t s_reinited = 0U;
 
-            Serial_Printf("[imu] not_ready who=0x%02X addr=0x%02X healthy=0 init_stage=%u init_name=%s last_stage=%u last_name=%s\r\n",
-                          (unsigned int)who, (unsigned int)addr,
-                          (unsigned int)IMU_GetInitErrorStage(),
-                          IMU_GetErrorStageName(IMU_GetInitErrorStage()),
-                          (unsigned int)stage, IMU_GetErrorStageName(stage));
-
-            if (!s_reinited)
-            {
-                s_reinited = 1U;
-                IMU_Init();
-                if (IMU_IsReady())
-                {
-                    Serial_SendString("[imu] reinit_ok\r\n");
-                    IMU_CalibrateGyroZ(300);
-                    IMU_ResetYaw();
-                }
-                else
-                {
-                    uint8_t riStage = IMU_GetLastErrorStage();
-                    Serial_Printf("[imu] reinit_fail stage=%u name=%s\r\n",
-                                  (unsigned int)riStage, IMU_GetErrorStageName(riStage));
-                }
-            }
-        }
+        Serial_Printf("[imu-init] fail stage=%s\r\n", IMU_GetErrorStageName(stage));
+        Serial_Printf("[imu-bus] sda=%u scl=%u status=0x%08lX\r\n",
+            (unsigned int)IMU_GetSdaLevel(),
+            (unsigned int)IMU_GetSclLevel(),
+            (unsigned long)IMU_GetLastI2CStatus());
+        BoardTest_PrintIMUDiag();
         return;
     }
 
@@ -265,6 +224,8 @@ static void BoardTest_PrintIMU(void)
         int32_t yaw_x10 = 0;
         uint8_t healthy;
         uint8_t gyroOk;
+        uint8_t addr = IMU_GetAddr();
+        uint8_t who = IMU_GetLastWhoAmI();
 
         gyroOk = IMU_GetGyroRawZ_x10(&gzRaw, &gzDps_x10);
         if (gyroOk)
@@ -278,53 +239,38 @@ static void BoardTest_PrintIMU(void)
             int16_t gx = IMU_GetLastGyroXRaw();
             int16_t gy = IMU_GetLastGyroYRaw();
             int16_t gz = IMU_GetLastGyroZRaw();
-            int16_t off = IMU_GetGyroZOffset();
-            int32_t dyaw = IMU_GetLastYawDelta_x10();
-            uint8_t r[5] = {0};
-            uint8_t sb[6] = {0};
 
-            Serial_Printf("[imu] ok addr=0x%02X who=0x%02X healthy=%u\r\n",
-                          (unsigned int)addr, (unsigned int)who, (unsigned int)healthy);
-            Serial_Printf("[imu-gyro] gx=%d gy=%d gz=%d off=%d gz_dps=%d.%d\r\n",
-                          (int)gx, (int)gy, (int)gz, (int)off,
-                          (int)(gzDps_x10 / 10), (int)((gzDps_x10 < 0) ? (-gzDps_x10 % 10) : (gzDps_x10 % 10)));
-            Serial_Printf("[imu-yaw] yaw_raw=%d yaw=%d.%d dyaw=%d.%d\r\n",
-                          (int)yaw_x10,
-                          (int)(yaw_x10 / 10), (int)((yaw_x10 < 0) ? (-yaw_x10 % 10) : (yaw_x10 % 10)),
-                          (int)(dyaw / 10), (int)((dyaw < 0) ? (-dyaw % 10) : (dyaw % 10)));
+            Serial_Printf("[imu-data] addr=0x%02X who=0x%02X gx=%d gy=%d gz=%d dps_z=%s%ld.%ld yaw=%s%ld.%ld healthy=%u\r\n",
+                (unsigned int)addr,
+                (unsigned int)who,
+                (int)gx,
+                (int)gy,
+                (int)gz,
+                BoardTest_X10Sign((int32_t)gzDps_x10),
+                (long)BoardTest_X10AbsWhole((int32_t)gzDps_x10),
+                (long)BoardTest_X10AbsFrac((int32_t)gzDps_x10),
+                BoardTest_X10Sign(yaw_x10),
+                (long)BoardTest_X10AbsWhole(yaw_x10),
+                (long)BoardTest_X10AbsFrac(yaw_x10),
+                (unsigned int)healthy);
 
-            IMU_DebugReadReg(0x6BU, &r[0]);
-            IMU_DebugReadReg(0x6CU, &r[1]);
-            IMU_DebugReadReg(0x19U, &r[2]);
-            IMU_DebugReadReg(0x1AU, &r[3]);
-            IMU_DebugReadReg(0x1BU, &r[4]);
-            Serial_Printf("[imu-reg] pwr=0x%02X pwr2=0x%02X smpl=0x%02X cfg=0x%02X gyro_cfg=0x%02X\r\n",
-                          (unsigned int)r[0], (unsigned int)r[1],
-                          (unsigned int)r[2], (unsigned int)r[3], (unsigned int)r[4]);
-
-            Serial_Printf("[imu-used] g=%02X %02X %02X %02X %02X %02X\r\n",
-                          (unsigned int)IMU_GetLastGyroByte(0U),
-                          (unsigned int)IMU_GetLastGyroByte(1U),
-                          (unsigned int)IMU_GetLastGyroByte(2U),
-                          (unsigned int)IMU_GetLastGyroByte(3U),
-                          (unsigned int)IMU_GetLastGyroByte(4U),
-                          (unsigned int)IMU_GetLastGyroByte(5U));
-
-            IMU_DebugReadReg(0x43U, &sb[0]);
-            IMU_DebugReadReg(0x44U, &sb[1]);
-            IMU_DebugReadReg(0x45U, &sb[2]);
-            IMU_DebugReadReg(0x46U, &sb[3]);
-            IMU_DebugReadReg(0x47U, &sb[4]);
-            IMU_DebugReadReg(0x48U, &sb[5]);
-            Serial_Printf("[imu-single] g=%02X %02X %02X %02X %02X %02X\r\n",
-                          (unsigned int)sb[0], (unsigned int)sb[1],
-                          (unsigned int)sb[2], (unsigned int)sb[3],
-                          (unsigned int)sb[4], (unsigned int)sb[5]);
+            Serial_Printf("[imu-bytes] g=%02X %02X %02X %02X %02X %02X\r\n",
+                (unsigned int)IMU_GetLastGyroByte(0U),
+                (unsigned int)IMU_GetLastGyroByte(1U),
+                (unsigned int)IMU_GetLastGyroByte(2U),
+                (unsigned int)IMU_GetLastGyroByte(3U),
+                (unsigned int)IMU_GetLastGyroByte(4U),
+                (unsigned int)IMU_GetLastGyroByte(5U));
+            BoardTest_PrintIMUDiag();
         }
         else
         {
-            Serial_Printf("[imu] fail addr=0x%02X who=0x%02X gyro_read_fail healthy=%u\r\n",
-                          (unsigned int)addr, (unsigned int)who, (unsigned int)healthy);
+            Serial_Printf("[imu-data] fail addr=0x%02X who=0x%02X stage=%s healthy=%u\r\n",
+                (unsigned int)addr,
+                (unsigned int)who,
+                IMU_GetErrorStageName(IMU_GetLastErrorStage()),
+                (unsigned int)healthy);
+            BoardTest_PrintIMUDiag();
         }
     }
 #else
@@ -340,11 +286,7 @@ static void BoardTest_PrintOptionalStatus(void)
     Serial_SendString("[pwm] disabled\r\n");
 #endif
 
-#if ECAR_TEST_SERVO_ENABLE
-    Serial_SendString("[servo] center\r\n");
-#else
-    Serial_SendString("[servo] disabled\r\n");
-#endif
+    Serial_SendString("[gimbal] stepper architecture\r\n");
 
     BoardTest_PrintIMU();
 
@@ -366,15 +308,6 @@ void BoardTest_Init(void)
     s_ledBlinkMs = 0U;
     Motor_StopAll();
 
-#if ECAR_TEST_SERVO_ENABLE
-    Servo_SetPulseUs(0U, SERVO_MID_PULSE_US);
-    Servo_SetPulseUs(1U, SERVO_MID_PULSE_US);
-    Servo_SetPulseUs(2U, SERVO_MID_PULSE_US);
-    Servo_SetPulseUs(3U, SERVO_MID_PULSE_US);
-#else
-    Servo_DisableAll();
-#endif
-
 #if ECAR_TEST_BEEP_ENABLE
     Beep_BeepMs(80U);
 #endif
@@ -384,9 +317,38 @@ void BoardTest_Init(void)
 #if ECAR_TEST_IMU_ENABLE
     if (IMU_IsReady())
     {
-        IMU_CalibrateGyroZ(300);
-        Serial_Printf("[imu] calib offset=%d\r\n", (int)IMU_GetGyroZOffset());
-        IMU_ResetYaw();
+        Serial_Printf("[imu-init] ok addr=0x%02X who=0x%02X\r\n",
+            (unsigned int)IMU_GetAddr(),
+            (unsigned int)IMU_GetLastWhoAmI());
+        BoardTest_PrintIMUConfig();
+        if (IMU_CalibrateGyroZ(300U))
+        {
+            Serial_Printf("[imu-calib] ok samples=%u valid=%u offset=%d\r\n",
+                (unsigned int)IMU_GetLastCalibSamples(),
+                (unsigned int)IMU_GetLastCalibValid(),
+                (int)IMU_GetGyroZOffset());
+        }
+        else
+        {
+            Serial_Printf("[imu-calib] fail samples=%u valid=%u stage=%s\r\n",
+                (unsigned int)IMU_GetLastCalibSamples(),
+                (unsigned int)IMU_GetLastCalibValid(),
+                IMU_GetErrorStageName(IMU_GetLastErrorStage()));
+        }
+    }
+    else
+    {
+        uint8_t stage = IMU_GetInitErrorStage();
+        if (stage == 0U)
+        {
+            stage = IMU_GetLastErrorStage();
+        }
+        Serial_Printf("[imu-init] fail stage=%s\r\n", IMU_GetErrorStageName(stage));
+        Serial_Printf("[imu-bus] sda=%u scl=%u status=0x%08lX\r\n",
+            (unsigned int)IMU_GetSdaLevel(),
+            (unsigned int)IMU_GetSclLevel(),
+            (unsigned long)IMU_GetLastI2CStatus());
+        BoardTest_PrintIMUDiag();
     }
 #endif
 
@@ -397,9 +359,37 @@ void BoardTest_Task10ms(void)
 {
     uint8_t key = Key_GetNum();
 
-    if (key != 0U)
+    if (key == 1U)
     {
-        Serial_Printf("[key-event] key=%u\r\n", (unsigned int)key);
+        g_carEnable = 0U;
+        g_leftPwm   = 400;
+        g_rightPwm  = 0;
+        Motor_SetPWM(400, 0);
+        Serial_Printf("[motor-key,k1,left,400]\r\n");
+    }
+    else if (key == 2U)
+    {
+        g_carEnable = 0U;
+        g_leftPwm   = 0;
+        g_rightPwm  = 400;
+        Motor_SetPWM(0, 400);
+        Serial_Printf("[motor-key,k2,right,400]\r\n");
+    }
+    else if (key == 3U)
+    {
+        g_carEnable = 0U;
+        g_leftPwm   = 400;
+        g_rightPwm  = 400;
+        Motor_SetPWM(400, 400);
+        Serial_Printf("[motor-key,k3,both,400]\r\n");
+    }
+    else if (key == 4U)
+    {
+        g_carEnable = 0U;
+        g_leftPwm   = 0;
+        g_rightPwm  = 0;
+        Motor_StopAll();
+        Serial_Printf("[motor-key,k4,stop]\r\n");
     }
 
 #if ECAR_TEST_IMU_ENABLE
@@ -408,16 +398,8 @@ void BoardTest_Task10ms(void)
         IMU_UpdateYaw(10);
     }
 #endif
-
-#if ECAR_TEST_MOTOR_ENABLE
-    if (g_carEnable)
-    {
-        App_Control_ApplyMotorOutput();
-    }
-#else
-    Motor_StopAll();
-#endif
 }
+
 void BoardTest_Task100ms(void)
 {
     /* Keep PB04 / LED_USER low by default. */
