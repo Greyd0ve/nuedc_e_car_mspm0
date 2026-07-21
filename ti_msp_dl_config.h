@@ -242,10 +242,10 @@ extern "C" {
 #define GPIO_KEYS_KEY2_PORT                                              (GPIOA)
 #define GPIO_KEYS_KEY2_PIN                                      (DL_GPIO_PIN_30)
 #define GPIO_KEYS_KEY2_IOMUX                                      (IOMUX_PINCM5)
-/* Defines for KEY3: GPIOB.0 with pinCMx 12 on package pin 47 */
+/* Defines for KEY3: GPIOB.27 with pinCMx 58 on package pin 29 */
 #define GPIO_KEYS_KEY3_PORT                                              (GPIOB)
-#define GPIO_KEYS_KEY3_PIN                                       (DL_GPIO_PIN_0)
-#define GPIO_KEYS_KEY3_IOMUX                                     (IOMUX_PINCM12)
+#define GPIO_KEYS_KEY3_PIN                                      (DL_GPIO_PIN_27)
+#define GPIO_KEYS_KEY3_IOMUX                                     (IOMUX_PINCM58)
 /* Defines for KEY4: GPIOB.26 with pinCMx 57 on package pin 28 */
 #define GPIO_KEYS_KEY4_PORT                                              (GPIOB)
 #define GPIO_KEYS_KEY4_PIN                                      (DL_GPIO_PIN_26)

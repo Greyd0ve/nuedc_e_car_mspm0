@@ -324,7 +324,7 @@
 #define KEY2_PORT                       GPIO_KEYS_KEY2_PORT  /* PA30 / SW2 */
 #define KEY2_PIN                        GPIO_KEYS_KEY2_PIN
 #define KEY2                            KEY2_PIN
-#define KEY3_PORT                       GPIO_KEYS_KEY3_PORT  /* PB0 / SW3 */
+#define KEY3_PORT                       GPIO_KEYS_KEY3_PORT  /* PB27 / SW3 */
 #define KEY3_PIN                        GPIO_KEYS_KEY3_PIN
 #define KEY3                            KEY3_PIN
 #define KEY4_PORT                       GPIO_KEYS_KEY4_PORT  /* PB26 / SW4 */
