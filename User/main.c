@@ -352,6 +352,8 @@ int main(void)
             VisualGimbal_Task10ms();
 #elif ECAR_GIMBAL_STEP_TEST_MODE
             /* No periodic car or board control */
+#elif ECAR_BOARD_TEST_MODE
+            BoardTest_Task10ms();
 #else
             ECar_Control10ms();
 #endif
