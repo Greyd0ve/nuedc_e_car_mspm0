@@ -204,7 +204,7 @@ void VisualGimbal_Task10ms(void)
     age = Timer_GetMillis() - obs.rxTimeMs;
     if (age > s_maxObservationAgeMs) { s_maxObservationAgeMs = age; }
 
-    if (age > AIM_X_DATA_MAX_AGE_MS)
+    if (age > AIM_XY_DATA_MAX_AGE_MS)
     {
         if (!s_hasLastStaleSequence || obs.sequence != s_lastStaleSequence)
         {
@@ -351,7 +351,7 @@ void VisualGimbal_Task10ms(void)
     }
     s_lastMoveDirection = logicalDirection;
 
-    if (!GimbalStepper_StartMove(GIMBAL_AXIS_X, logicalDirection, pulses, AIM_X_TEST_STEP_FREQ_HZ))
+    if (!GimbalStepper_StartMove(GIMBAL_AXIS_X, logicalDirection, pulses, AIM_X_STEP_FREQ_HZ))
     {
         VisualGimbal_MarkSequenceHandled(obs.sequence);
         s_startFailures++;
@@ -365,7 +365,7 @@ void VisualGimbal_Task10ms(void)
     s_state               = VISUAL_GIMBAL_MOVING;
     s_lastDirection       = logicalDirection;
     s_lastCommandPulses   = pulses;
-    s_lastFrequencyHz     = AIM_X_TEST_STEP_FREQ_HZ;
+    s_lastFrequencyHz     = AIM_X_STEP_FREQ_HZ;
     s_commandAccepted     = 1U;
 }
 

@@ -116,44 +116,53 @@
 
 /* Visual gimbal X-axis single-pulse test (web vision → stepper). */
 #ifndef ECAR_VISUAL_GIMBAL_X_TEST_MODE
-#define ECAR_VISUAL_GIMBAL_X_TEST_MODE          1U
+#define ECAR_VISUAL_GIMBAL_X_TEST_MODE          0U
 #endif
 
-#if (ECAR_VISUAL_GIMBAL_X_TEST_MODE == 1U) && (ECAR_AIM_LINK_TEST_MODE == 1U)
-#error "Visual gimbal X test and aim link test cannot run together"
+/* Visual gimbal XY dual-axis closed-loop test (K230 vision → XY stepper). */
+#ifndef ECAR_VISUAL_GIMBAL_XY_TEST_MODE
+#define ECAR_VISUAL_GIMBAL_XY_TEST_MODE         1U
 #endif
-#if (ECAR_VISUAL_GIMBAL_X_TEST_MODE == 1U) && (ECAR_GIMBAL_STEP_TEST_MODE == 1U)
-#error "Visual gimbal X test and gimbal step test cannot run together"
-#endif
-#if (ECAR_VISUAL_GIMBAL_X_TEST_MODE == 1U) && (ECAR_BOARD_TEST_MODE == 1U)
-#error "Visual gimbal X test and board test cannot run together"
-#endif
-#if (ECAR_VISUAL_GIMBAL_X_TEST_MODE == 1U) && (ECAR_ENCODER_MINIMAL_DEBUG == 1U)
-#error "Visual gimbal X test and encoder debug cannot run together"
+
+#if (ECAR_VISUAL_GIMBAL_XY_TEST_MODE + ECAR_VISUAL_GIMBAL_X_TEST_MODE + \
+     ECAR_AIM_LINK_TEST_MODE + ECAR_GIMBAL_STEP_TEST_MODE + \
+     ECAR_BOARD_TEST_MODE + ECAR_ENCODER_MINIMAL_DEBUG) > 1U
+#error "Only one test mode may be active at a time"
 #endif
 
 /* Visual-to-stepper X-axis parameters. */
 #define AIM_X_DEADBAND_PX                       5
 #define AIM_X_SOFT_LIMIT_PULSES                 400
-#define AIM_X_TEST_STEP_FREQ_HZ                 600U
+#define AIM_X_STEP_FREQ_HZ                      600U
 #define AIM_X_MAX_SINGLE_PULSES                 8U
-#define AIM_X_DATA_MAX_AGE_MS                   60U
 #define AIM_X_LOCK_ENTER_PX                     5
 #define AIM_X_LOCK_EXIT_PX                      9
 #define AIM_X_LOCK_CONFIRM_FRAMES               4U
 
-/*
- * AIM_X_ERROR_POSITIVE_DIR: 1 = logical positive, -1 = logical negative.
- *   errorX = rect_x - laser_x > 0 → call StartMove with this direction.
- *   errorX < 0 → use opposite direction.
- *   Invert this macro (between 1 and -1) if real motion direction
- *   is wrong; do NOT modify GIMBAL_X_POSITIVE_DIR_LEVEL.
- */
-#define AIM_X_ERROR_POSITIVE_DIR        1
+#define AIM_X_ERROR_POSITIVE_DIR               1
 
-/* Visual gimbal debug output gate. Set to 1U to enable UART1 debug logs. */
+/* Visual-to-stepper Y-axis parameters. */
+#define AIM_Y_DEADBAND_PX                       5
+#define AIM_Y_SOFT_LIMIT_PULSES                 250
+#define AIM_Y_STEP_FREQ_HZ                      600U
+#define AIM_Y_MAX_SINGLE_PULSES                 8U
+#define AIM_Y_LOCK_ENTER_PX                     5
+#define AIM_Y_LOCK_EXIT_PX                      9
+#define AIM_Y_LOCK_CONFIRM_FRAMES               4U
+
+#define AIM_Y_ERROR_POSITIVE_DIR               1
+
+/* Shared visual data age limit. */
+#define AIM_XY_DATA_MAX_AGE_MS                  60U
+
+/* Visual gimbal XY debug output gate. */
+#ifndef ECAR_VISUAL_GIMBAL_XY_DEBUG_ENABLE
+#define ECAR_VISUAL_GIMBAL_XY_DEBUG_ENABLE      0U
+#endif
+
+/* Visual gimbal debug output gate (legacy X-only). */
 #ifndef ECAR_VISUAL_GIMBAL_DEBUG_ENABLE
-#define ECAR_VISUAL_GIMBAL_DEBUG_ENABLE 0U
+#define ECAR_VISUAL_GIMBAL_DEBUG_ENABLE         0U
 #endif
 
 #if (AIM_X_ERROR_POSITIVE_DIR != 1) && (AIM_X_ERROR_POSITIVE_DIR != -1)
@@ -175,6 +184,25 @@
 #error "AIM_X_LOCK_CONFIRM_FRAMES must be non-zero"
 #endif
 
+#if (AIM_Y_ERROR_POSITIVE_DIR != 1) && (AIM_Y_ERROR_POSITIVE_DIR != -1)
+#error "AIM_Y_ERROR_POSITIVE_DIR must be 1 or -1"
+#endif
+#if (AIM_Y_DEADBAND_PX < 0)
+#error "AIM_Y_DEADBAND_PX must not be negative"
+#endif
+#if (AIM_Y_SOFT_LIMIT_PULSES <= 0)
+#error "AIM_Y_SOFT_LIMIT_PULSES must be positive"
+#endif
+#if (AIM_Y_MAX_SINGLE_PULSES == 0U)
+#error "AIM_Y_MAX_SINGLE_PULSES must be non-zero"
+#endif
+#if (AIM_Y_LOCK_EXIT_PX < AIM_Y_LOCK_ENTER_PX)
+#error "AIM_Y_LOCK_EXIT_PX must be >= AIM_Y_LOCK_ENTER_PX"
+#endif
+#if (AIM_Y_LOCK_CONFIRM_FRAMES == 0U)
+#error "AIM_Y_LOCK_CONFIRM_FRAMES must be non-zero"
+#endif
+
 /* Stepper motor physical parameters. */
 #define GIMBAL_MOTOR_FULL_STEPS_PER_REV         200U
 #define GIMBAL_MICROSTEP                        16U
@@ -190,9 +218,14 @@
 #define GIMBAL_STEP_FREQ_MIN_HZ                 100U
 #define GIMBAL_STEP_FREQ_MAX_HZ                 5000U
 
-#if (AIM_X_TEST_STEP_FREQ_HZ < GIMBAL_STEP_FREQ_MIN_HZ) || \
-    (AIM_X_TEST_STEP_FREQ_HZ > GIMBAL_STEP_FREQ_MAX_HZ)
-#error AIM_X_TEST_STEP_FREQ_HZ out of range
+#if (AIM_X_STEP_FREQ_HZ < GIMBAL_STEP_FREQ_MIN_HZ) || \
+    (AIM_X_STEP_FREQ_HZ > GIMBAL_STEP_FREQ_MAX_HZ)
+#error AIM_X_STEP_FREQ_HZ out of range
+#endif
+
+#if (AIM_Y_STEP_FREQ_HZ < GIMBAL_STEP_FREQ_MIN_HZ) || \
+    (AIM_Y_STEP_FREQ_HZ > GIMBAL_STEP_FREQ_MAX_HZ)
+#error AIM_Y_STEP_FREQ_HZ out of range
 #endif
 
 /* Direction level configurable per axis. Valid: 0U or 1U. */
