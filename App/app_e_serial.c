@@ -11,6 +11,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#if ECAR_E_TASK_MODE
+#include "app_e_task.h"
+#endif
+
 /* 文本帧串口控制台。
  * 帧格式为中括号包裹的逗号字段，例如 [ecar,set,base,18]。
  * 串口解析在前台执行，UART ISR 只负责把字节放入环形缓冲区。
@@ -723,13 +727,22 @@ static void ESerial_HandleSlider(char *fields[], uint8_t fieldCount)
     (void)ESerial_SetNamedParam(fields[1], value);
 }
 
+static void ESerial_StopCurrentTask(void)
+{
+#if ECAR_E_TASK_MODE
+    ETask_Stop();
+#else
+    ECar_Stop();
+#endif
+}
+
 static void ESerial_HandleKey(char *fields[], uint8_t fieldCount)
 {
     if (fieldCount >= 3U &&
         ESerial_StrEqualIgnoreCase(fields[1], "emergency") &&
         ESerial_StrEqualIgnoreCase(fields[2], "down"))
     {
-        ECar_Stop();
+        ESerial_StopCurrentTask();
         Serial_SendString("[status,ok,emergency]\r\n");
         return;
     }
@@ -781,7 +794,7 @@ static void ESerial_HandleECar(char *fields[], uint8_t fieldCount)
 
     if (ESerial_StrEqualIgnoreCase(fields[1], "stop"))
     {
-        ECar_Stop();
+        ESerial_StopCurrentTask();
         Serial_SendString("[status,ok,stop]\r\n");
         return;
     }
@@ -869,7 +882,7 @@ static void ESerial_HandlePacket(char *packet)
 
     if (ESerial_StrEqualIgnoreCase(fields[0], "stop"))
     {
-        ECar_Stop();
+        ESerial_StopCurrentTask();
         Serial_SendString("[status,ok,stop]\r\n");
         return;
     }
