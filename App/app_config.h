@@ -101,7 +101,7 @@
 #define ECAR_CORNER_CONFIRM_COUNT               2U
 #endif
 #ifndef ECAR_BOARD_TEST_PWM_LIMIT
-#define ECAR_BOARD_TEST_PWM_LIMIT               260
+#define ECAR_BOARD_TEST_PWM_LIMIT               400
 #endif
 
 /* ---- Unified application mode selection ---- */
