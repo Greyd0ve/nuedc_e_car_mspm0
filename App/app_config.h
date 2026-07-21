@@ -121,13 +121,19 @@
 
 /* Visual gimbal XY dual-axis closed-loop test (K230 vision → XY stepper). */
 #ifndef ECAR_VISUAL_GIMBAL_XY_TEST_MODE
-#define ECAR_VISUAL_GIMBAL_XY_TEST_MODE         1U
+#define ECAR_VISUAL_GIMBAL_XY_TEST_MODE         0U
 #endif
 
-#if (ECAR_VISUAL_GIMBAL_XY_TEST_MODE + ECAR_VISUAL_GIMBAL_X_TEST_MODE + \
-     ECAR_AIM_LINK_TEST_MODE + ECAR_GIMBAL_STEP_TEST_MODE + \
-     ECAR_BOARD_TEST_MODE + ECAR_ENCODER_MINIMAL_DEBUG) > 1U
-#error "Only one test mode may be active at a time"
+/* E-car task mode: visual aiming + tracking, integrated. */
+#ifndef ECAR_E_TASK_MODE
+#define ECAR_E_TASK_MODE                        1U
+#endif
+
+#if (ECAR_E_TASK_MODE + ECAR_VISUAL_GIMBAL_XY_TEST_MODE + \
+     ECAR_VISUAL_GIMBAL_X_TEST_MODE + ECAR_AIM_LINK_TEST_MODE + \
+     ECAR_GIMBAL_STEP_TEST_MODE + ECAR_BOARD_TEST_MODE + \
+     ECAR_ENCODER_MINIMAL_DEBUG) > 1U
+#error "Only one mode may be active at a time"
 #endif
 
 /* Visual-to-stepper X-axis parameters. */
@@ -154,6 +160,13 @@
 
 /* Shared visual data age limit. */
 #define AIM_XY_DATA_MAX_AGE_MS                  60U
+
+/* E-task: stable aim lock time before starting car tracking. */
+#define ECAR_E_TASK_AIM_STABLE_MS               200U
+
+#if (ECAR_E_TASK_AIM_STABLE_MS == 0U)
+#error "ECAR_E_TASK_AIM_STABLE_MS must be non-zero"
+#endif
 
 /* Visual gimbal XY debug output gate. */
 #ifndef ECAR_VISUAL_GIMBAL_XY_DEBUG_ENABLE

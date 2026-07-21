@@ -42,5 +42,6 @@ void VisualGimbalXY_Init(void);
 void VisualGimbalXY_Task10ms(void);
 void VisualGimbalXY_Stop(void);
 void VisualGimbalXY_GetDebug(VisualGimbalXYDebug_t *outDebug);
+uint8_t VisualGimbalXY_IsLocked(void);
 
 #endif

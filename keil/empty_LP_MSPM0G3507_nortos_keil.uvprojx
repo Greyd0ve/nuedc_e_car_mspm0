@@ -453,6 +453,11 @@
               <FilePath>..\App\app_visual_gimbal_xy.c</FilePath>
             </File>
             <File>
+              <FileName>app_e_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\App\app_e_task.c</FilePath>
+            </File>
+            <File>
               <FileName>app_board_test.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\App\app_board_test.c</FilePath>

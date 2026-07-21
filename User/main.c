@@ -20,6 +20,12 @@
 #if ECAR_AIM_LINK_TEST_MODE
 #include "app_aim_link.h"
 #include "K230Uart.h"
+#elif ECAR_E_TASK_MODE
+#include "app_aim_link.h"
+#include "K230Uart.h"
+#include "GimbalStepper.h"
+#include "app_visual_gimbal_xy.h"
+#include "app_e_task.h"
 #elif ECAR_VISUAL_GIMBAL_XY_TEST_MODE
 #include "app_aim_link.h"
 #include "K230Uart.h"
@@ -257,6 +263,17 @@ int main(void)
 
 #if ECAR_AIM_LINK_TEST_MODE
     AimLink_Init();
+#elif ECAR_E_TASK_MODE
+    Grayscale_Init();
+    Encoder_Init();
+    BeepLed_Init();
+    App_Control_Init();
+    ECar_Init();
+    ECar_Serial_Init();
+    AimLink_Init();
+    GimbalStepper_Init();
+    VisualGimbalXY_Init();
+    ETask_Init();
 #elif ECAR_VISUAL_GIMBAL_XY_TEST_MODE
     AimLink_Init();
     GimbalStepper_Init();
@@ -281,7 +298,7 @@ int main(void)
     OLED_Clear();
 #endif
 
-#if ECAR_IMU_ENABLE && !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE && !ECAR_VISUAL_GIMBAL_X_TEST_MODE && !ECAR_VISUAL_GIMBAL_XY_TEST_MODE
+#if ECAR_IMU_ENABLE && !ECAR_GIMBAL_STEP_TEST_MODE && !ECAR_AIM_LINK_TEST_MODE && !ECAR_VISUAL_GIMBAL_X_TEST_MODE && !ECAR_VISUAL_GIMBAL_XY_TEST_MODE && !ECAR_E_TASK_MODE
     IMU_Init();
 #endif
 
@@ -302,7 +319,7 @@ int main(void)
     {
         uint8_t taskCount;
 
-#if ECAR_AIM_LINK_TEST_MODE || ECAR_VISUAL_GIMBAL_X_TEST_MODE || ECAR_VISUAL_GIMBAL_XY_TEST_MODE
+#if ECAR_AIM_LINK_TEST_MODE || ECAR_VISUAL_GIMBAL_X_TEST_MODE || ECAR_VISUAL_GIMBAL_XY_TEST_MODE || ECAR_E_TASK_MODE
         AimLink_Process();
 #endif
 
@@ -325,6 +342,10 @@ int main(void)
         {
 #if ECAR_AIM_LINK_TEST_MODE
             /* No car control */
+#elif ECAR_E_TASK_MODE
+            VisualGimbalXY_Task10ms();
+            ECar_Control10ms();
+            ETask_Control10ms();
 #elif ECAR_VISUAL_GIMBAL_XY_TEST_MODE
             VisualGimbalXY_Task10ms();
 #elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
@@ -339,6 +360,8 @@ int main(void)
 
 #if ECAR_AIM_LINK_TEST_MODE || ECAR_VISUAL_GIMBAL_X_TEST_MODE || ECAR_VISUAL_GIMBAL_XY_TEST_MODE
         /* Key and serial not used */
+#elif ECAR_E_TASK_MODE
+        ETask_KeyProcess();
 #elif ECAR_GIMBAL_STEP_TEST_MODE
         GimbalStepTest_KeyProcess();
 #elif !ECAR_BOARD_TEST_MODE
@@ -383,6 +406,8 @@ int main(void)
 #endif
 #elif ECAR_GIMBAL_STEP_TEST_MODE
             /* No 100ms task */
+#elif ECAR_E_TASK_MODE
+            /* No periodic output in E-task mode */
 #elif ECAR_BOARD_TEST_MODE
             BoardTest_Task100ms();
 #else
@@ -397,6 +422,8 @@ int main(void)
 #elif ECAR_VISUAL_GIMBAL_X_TEST_MODE
             /* No 200ms task */
 #elif ECAR_VISUAL_GIMBAL_XY_TEST_MODE
+            /* No 200ms task */
+#elif ECAR_E_TASK_MODE
             /* No 200ms task */
 #elif ECAR_GIMBAL_STEP_TEST_MODE
             /* No 200ms task */

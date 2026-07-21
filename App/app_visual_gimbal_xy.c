@@ -432,3 +432,13 @@ void VisualGimbalXY_GetDebug(VisualGimbalXYDebug_t *outDebug)
 
     if (primask == 0U) { __enable_irq(); }
 }
+
+uint8_t VisualGimbalXY_IsLocked(void)
+{
+    uint8_t locked;
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    locked = (uint8_t)((s_axisX.locked != 0U && s_axisY.locked != 0U) ? 1U : 0U);
+    if (primask == 0U) { __enable_irq(); }
+    return locked;
+}
