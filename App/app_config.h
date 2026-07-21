@@ -15,10 +15,10 @@
 #define ECAR_ENABLE_REMOTE_START                0
 #endif
 #ifndef ECAR_BOARD_TEST_MODE
-#define ECAR_BOARD_TEST_MODE                    0
+#define ECAR_BOARD_TEST_MODE                    1
 #endif
 #ifndef ECAR_TEST_MOTOR_ENABLE
-#define ECAR_TEST_MOTOR_ENABLE                  0
+#define ECAR_TEST_MOTOR_ENABLE                  1
 #endif
 #ifndef ECAR_TEST_BEEP_ENABLE
 #define ECAR_TEST_BEEP_ENABLE                   0
@@ -111,7 +111,7 @@
 #define ECAR_APP_MODE_INTEGRATED     3U
 
 #ifndef ECAR_APP_MODE
-#define ECAR_APP_MODE                ECAR_APP_MODE_CAR_TUNING
+#define ECAR_APP_MODE                ECAR_APP_MODE_NONE
 #endif
 
 #if (ECAR_APP_MODE > 3U)
