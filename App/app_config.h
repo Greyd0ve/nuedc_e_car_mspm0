@@ -15,7 +15,7 @@
 #define ECAR_ENABLE_REMOTE_START                0
 #endif
 #ifndef ECAR_BOARD_TEST_MODE
-#define ECAR_BOARD_TEST_MODE                    1
+#define ECAR_BOARD_TEST_MODE                    0
 #endif
 #ifndef ECAR_TEST_MOTOR_ENABLE
 #define ECAR_TEST_MOTOR_ENABLE                  1
@@ -91,7 +91,7 @@
 #define ECAR_DEFAULT_LAP_PULSE                  ((int32_t)((ECAR_LAP_DISTANCE_CM / ECAR_CM_PER_PULSE) + 0.5f))
 
 /* Conservative first-run speed defaults, in cm/s. */
-#define ECAR_DEFAULT_BASE_SPEED_CMPS            55.0f
+#define ECAR_DEFAULT_BASE_SPEED_CMPS            30.0f
 #define ECAR_DEFAULT_RECOVER_SPEED_CMPS         10.0f
 #define ECAR_DEFAULT_CORNER_FORWARD_CMPS        10.0f
 #define ECAR_DEFAULT_CORNER_TURN_CMPS           12.0f
@@ -111,7 +111,7 @@
 #define ECAR_APP_MODE_INTEGRATED     3U
 
 #ifndef ECAR_APP_MODE
-#define ECAR_APP_MODE                ECAR_APP_MODE_NONE
+#define ECAR_APP_MODE                ECAR_APP_MODE_CAR_TUNING
 #endif
 
 #if (ECAR_APP_MODE > 3U)
