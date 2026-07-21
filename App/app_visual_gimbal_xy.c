@@ -286,7 +286,12 @@ void VisualGimbalXY_Task10ms(void)
     health = AimLink_GetHealth();
     if (health == AIM_LINK_FAULT) { VisualGimbalXY_LatchFault(); return; }
 
-    if (health == AIM_LINK_NO_SIGNAL) return;
+    if (health == AIM_LINK_NO_SIGNAL)
+    {
+        s_lastObservationAgeMs = 0xFFFFFFFFUL;
+        VisualGimbalXY_ResetAllState();
+        return;
+    }
 
     if (!AimLink_GetLatestObservation(&obs)) return;
 
@@ -345,7 +350,7 @@ void VisualGimbalXY_Task10ms(void)
     {
         absErr = (uint32_t)((s_axisX.filteredError >= 0) ? s_axisX.filteredError : -s_axisX.filteredError);
         if (absErr <= s_axisX.deadbandPx) { s_axisX.deadbandFrames++; }
-        else if (VisualGimbalXY_ProcessAxisLock(&s_axisX, absErr) == 0U)
+        if (VisualGimbalXY_ProcessAxisLock(&s_axisX, absErr) == 0U)
         {
             VisualGimbalXY_ProcessAxisMove(&s_axisX, s_axisX.filteredError);
         }
@@ -357,7 +362,7 @@ void VisualGimbalXY_Task10ms(void)
     {
         absErr = (uint32_t)((s_axisY.filteredError >= 0) ? s_axisY.filteredError : -s_axisY.filteredError);
         if (absErr <= s_axisY.deadbandPx) { s_axisY.deadbandFrames++; }
-        else if (VisualGimbalXY_ProcessAxisLock(&s_axisY, absErr) == 0U)
+        if (VisualGimbalXY_ProcessAxisLock(&s_axisY, absErr) == 0U)
         {
             VisualGimbalXY_ProcessAxisMove(&s_axisY, s_axisY.filteredError);
         }

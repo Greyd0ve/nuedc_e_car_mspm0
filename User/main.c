@@ -200,10 +200,12 @@ static void Main_PrintVisualGimbalXYDebug1000ms(void)
 {
     VisualGimbalXYDebug_t vg;
     VisualGimbalXY_GetDebug(&vg);
-    Serial_Printf("[xy,s,%u,xe,%d,xp,%lu,ye,%d,yp,%lu,l,%u,f,%u,o,%lu]\r\n",
+    Serial_Printf("[xy,s,%u,xe,%d,xp,%lu,xa,%u,ye,%d,yp,%lu,ya,%u,l,%u,f,%u,o,%lu]\r\n",
         (unsigned int)vg.sequence,
         (int)vg.x.filteredError, (unsigned long)vg.x.commandPulses,
+        (unsigned int)vg.x.commandAccepted,
         (int)vg.y.filteredError, (unsigned long)vg.y.commandPulses,
+        (unsigned int)vg.y.commandAccepted,
         (unsigned int)vg.xyLocked,
         (unsigned int)vg.globalFaultLatched,
         (unsigned long)K230Uart_GetOverflowCount());
